@@ -1,0 +1,25 @@
+{
+  "name": "lkt/factory-instantiator",
+  "description": "LKT Factory Instantiator",
+  "type": "library",
+  "version": "1.0.0",
+  "require": {
+    "php": ">=7.2.0",
+    "nesbot/carbon": "^2.62",
+    "chillerlan/php-filereader": "^2.0",
+    "lkt/column-types": "^1.0",
+    "lkt/value-objects": "^1.0",
+    "lkt/tools": "^1.2",
+    "lkt/factory-schemas": "^1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^7.5.20",
+    "symfony/var-dumper": "^5.0"
+  },
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Lkt\\Factory\\Instantiator\\": "src"
+    }
+  }
+}
