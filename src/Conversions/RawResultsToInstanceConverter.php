@@ -2,7 +2,6 @@
 
 namespace Lkt\Factory\Instantiator\Conversions;
 
-use Exception;
 use Lkt\Factory\Instantiator\Validations\ParseFieldValue;
 use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\BooleanField;
@@ -13,6 +12,7 @@ use Lkt\Factory\Schemas\Fields\FileField;
 use Lkt\Factory\Schemas\Fields\FloatField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\ForeignKeysField;
+use Lkt\Factory\Schemas\Fields\HTMLField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\JSONField;
 use Lkt\Factory\Schemas\Fields\StringField;
