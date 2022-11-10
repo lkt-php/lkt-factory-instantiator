@@ -3,6 +3,7 @@
 namespace Lkt\Factory\Instantiator\Conversions;
 
 use Lkt\Factory\Instantiator\Validations\ParseFieldValue;
+use Lkt\Factory\Instantiator\Validations\ValidateFieldValue;
 use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\ColorField;
@@ -85,47 +86,47 @@ final class RawResultsToInstanceConverter
         return array_reduce($fields, function (&$result, $field) use ($data) {
 
             $value = isset($data[$field->getName()]) ? $data[$field->getName()] : null;
-            $status = false;
+            $status = ValidateFieldValue::validate($field, $value);
             $key = trim('has' . ucfirst($field->getName()));
 
-            if ($field instanceof HTMLField) {
-                $status = $value !== '';
-            }
-
-            if ($field instanceof StringField
-                || $field instanceof EmailField
-                || $field instanceof ColorField
-                || $field instanceof ForeignKeysField) {
-                $status = $value !== '';
-            }
-
-            if ($field instanceof BooleanField) {
-                $status = $value === true;
-            }
-
-            if ($field instanceof IntegerField) {
-                $status = $value > 0;
-            }
-
-            if ($field instanceof FloatField) {
-                $status = $value > 0;
-            }
-
-            if ($field instanceof UnixTimeStampField) {
-                $status = $value !== null;
-            }
-
-            if ($field instanceof DateTimeField) {
-                $status = $value !== null;
-            }
-
-            if ($field instanceof JSONField) {
-                $status = $value !== null;
-            }
-
-            if ($field instanceof FileField) {
-                $status = $value !== null;
-            }
+//            if ($field instanceof HTMLField) {
+//                $status = $value !== '';
+//            }
+//
+//            if ($field instanceof StringField
+//                || $field instanceof EmailField
+//                || $field instanceof ColorField
+//                || $field instanceof ForeignKeysField) {
+//                $status = $value !== '';
+//            }
+//
+//            if ($field instanceof BooleanField) {
+//                $status = $value === true;
+//            }
+//
+//            if ($field instanceof IntegerField) {
+//                $status = $value > 0;
+//            }
+//
+//            if ($field instanceof FloatField) {
+//                $status = $value > 0;
+//            }
+//
+//            if ($field instanceof UnixTimeStampField) {
+//                $status = $value !== null;
+//            }
+//
+//            if ($field instanceof DateTimeField) {
+//                $status = $value !== null;
+//            }
+//
+//            if ($field instanceof JSONField) {
+//                $status = $value !== null;
+//            }
+//
+//            if ($field instanceof FileField) {
+//                $status = $value !== null;
+//            }
 
             $result[$key] = $status;
             return $result;

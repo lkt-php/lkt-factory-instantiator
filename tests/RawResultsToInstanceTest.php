@@ -1,6 +1,6 @@
 <?php
 
-namespace Lkt\FactoryConfig\Tests;
+namespace Lkt\Factory\Instantiator\Tests;
 
 
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;

@@ -2,8 +2,11 @@
 
 namespace Lkt\Factory\Instantiator\Cache;
 
+use Lkt\Factory\Instantiator\Instances\AbstractInstance;
+
 final class InstanceCache
 {
+    /** @var AbstractInstance[] */
     protected static $cache = [];
 
     /**
@@ -11,7 +14,7 @@ final class InstanceCache
      * @param $data
      * @return int
      */
-    public static function store(string $code, $data): int
+    public static function store(string $code, AbstractInstance $data): int
     {
         self::$cache[$code] = $data;
         return 1;
@@ -19,9 +22,9 @@ final class InstanceCache
 
     /**
      * @param string $code
-     * @return mixed
+     * @return AbstractInstance|null
      */
-    public static function load(string $code)
+    public static function load(string $code):? AbstractInstance
     {
         if (self::inCache($code)) {
             return self::$cache[$code];

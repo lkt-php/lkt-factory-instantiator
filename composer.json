@@ -10,16 +10,19 @@
     "lkt/column-types": "^1.0",
     "lkt/value-objects": "^1.0",
     "lkt/tools": "^1.2",
-    "lkt/factory-schemas": "^1.0"
+    "lkt/factory-schemas": "^1.0",
+    "lkt/query-caller": "^1.0"
   },
   "require-dev": {
     "phpunit/phpunit": "^7.5.20",
-    "symfony/var-dumper": "^5.0"
+    "symfony/var-dumper": "^5.0",
+    "lkt/mysql-connector": "^1.0"
   },
   "license": "MIT",
   "autoload": {
     "psr-4": {
-      "Lkt\\Factory\\Instantiator\\": "src"
+      "Lkt\\Factory\\Instantiator\\": "src",
+      "Lkt\\Factory\\Instantiator\\Tests\\": "tests"
     }
   }
 }
