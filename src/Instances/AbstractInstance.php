@@ -18,7 +18,7 @@ abstract class AbstractInstance
     protected $RELATED_DATA = [];
     protected $UPDATED_RELATED_DATA = [];
     protected $PENDING_UPDATE_RELATED_DATA = [];
-    const GENERATED_TYPE = null;
+    const GENERATED_TYPE = '';
 
     /**
      * @param $id
@@ -27,6 +27,7 @@ abstract class AbstractInstance
      */
     public function __construct($id = 0, string $component = null, array $initialData = [])
     {
+        dump(['constructor', $id, $component, count($initialData)]);
         if (!$component && static::GENERATED_TYPE) {
             $component = static::GENERATED_TYPE;
         }
@@ -35,31 +36,50 @@ abstract class AbstractInstance
     }
 
     /**
+     * @todo: remove this after update code generation for constructor
+     * @param array $initialData
+     * @return $this
+     */
+    public function setData(array $initialData): self
+    {
+        $this->DATA = $initialData;
+        return $this;
+    }
+
+    /**
      * @param $id
-     * @param string|null $component
+     * @param string $component
      * @param array $initialData
      * @return static
      * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
      * @throws \Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException
      */
-    public static function getInstance($id = null, string $component = null, array $initialData = []): self
+    public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): self
     {
-        if (!$id) {
+        if (!$component) {
+            $component = self::GENERATED_TYPE;
+        }
+        dump(['getInstance', $id, $component]);
+        if (!$id || !$component) {
             return new static();
         }
         $code = Instantiator::getInstanceCode($component, $id);
 
         if (InstanceCache::inCache($code)) {
+            dump(['inCache', $code]);
             return InstanceCache::load($code);
         }
 
         if (count($initialData) > 0) {
             $r = new static($id, $component, $initialData);
+            $r->setData($initialData);
+            dump(['$initialData', $code, $r, $initialData, static::class]);
             InstanceCache::store($code, $r);
             return InstanceCache::load($code);
         }
 
         $schema = Schema::get($component);
+        dump(['getSchema', $code]);
         $identifiers = $schema->getIdentifiers();
 
         $caller = QueryCaller::table($schema->getTable());

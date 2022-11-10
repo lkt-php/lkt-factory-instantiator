@@ -20,6 +20,7 @@ class Instantiator
 
     public static function make(string $component, $id, array $data = [])
     {
+        dump(['make', $component, $id, count($data)]);
         $code = static::getInstanceCode($component, $id);
 
         if (InstanceCache::inCache($code)) {
@@ -28,11 +29,8 @@ class Instantiator
 
         $schema = Schema::get($component);
 
-        $callable = [
-            $schema->getInstanceSettings()->getAppClass(),
-            'getInstance'
-        ];
+        $callable = [$schema->getInstanceSettings()->getAppClass(), 'getInstance'];
 
-        return call_user_func_array($callable, [$id, $component, $data]);
+        return call_user_func_array($callable, ['id' => $id, 'component' => $component, 'initialData' => $data]);
     }
 }
