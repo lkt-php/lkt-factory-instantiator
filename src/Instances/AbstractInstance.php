@@ -2,7 +2,9 @@
 
 namespace Lkt\Factory\Instantiator\Instances;
 
+use Lkt\DatabaseConnectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
@@ -27,7 +29,6 @@ abstract class AbstractInstance
      */
     public function __construct($id = 0, string $component = null, array $initialData = [])
     {
-        dump(['constructor', $id, $component, count($initialData)]);
         if (!$component && static::GENERATED_TYPE) {
             $component = static::GENERATED_TYPE;
         }
@@ -57,33 +58,33 @@ abstract class AbstractInstance
     public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): self
     {
         if (!$component) {
-            $component = self::GENERATED_TYPE;
+            $component = static::GENERATED_TYPE;
         }
-        dump(['getInstance', $id, $component]);
         if (!$id || !$component) {
             return new static();
         }
         $code = Instantiator::getInstanceCode($component, $id);
 
         if (InstanceCache::inCache($code)) {
-            dump(['inCache', $code]);
             return InstanceCache::load($code);
         }
 
         if (count($initialData) > 0) {
             $r = new static($id, $component, $initialData);
             $r->setData($initialData);
-            dump(['$initialData', $code, $r, $initialData, static::class]);
             InstanceCache::store($code, $r);
             return InstanceCache::load($code);
         }
 
         $schema = Schema::get($component);
-        dump(['getSchema', $code]);
         $identifiers = $schema->getIdentifiers();
 
         $caller = QueryCaller::table($schema->getTable());
-        $caller->setDatabaseConnector($schema->getDatabaseConnector());
+        $connector = $schema->getDatabaseConnector();
+        if (!$connector) {
+            $connector = DatabaseConnections::$defaultConnector;
+        }
+        $caller->setDatabaseConnector($connector);
         $caller->extractSchemaColumns($schema);
 
         foreach ($identifiers as $identifier) {
@@ -92,7 +93,11 @@ abstract class AbstractInstance
 
         $data = $caller->select();
         if (count($data) > 0) {
-            $r = new static($id, $component, $data[0]);
+            $converter = new RawResultsToInstanceConverter($component, $data[0]);
+            $itemData = $converter->parse();
+
+            $r = new static($id, $component, $itemData);
+            $r->setData($itemData);
             InstanceCache::store($code, $r);
             return InstanceCache::load($code);
         }

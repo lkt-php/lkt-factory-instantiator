@@ -14,13 +14,7 @@ trait ColumnForeignTrait
      */
     protected function _getForeignVal($type = '', $id = 0)
     {
-//        if ($type === 'opportunity-register-sites') {
-//            dump(['_getForeignVal', $type, $id]);
-//        }
         if (!$type || $id <= 0) {
-//            if ($type === 'opportunity-register-sites') {
-//                dump(['_getForeignVal exit', $type, $id]);
-//            }
             return null;
         }
         return factory($type, $id)->instance();

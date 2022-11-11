@@ -5,19 +5,7 @@ namespace Lkt\Factory\Instantiator\Conversions;
 use Lkt\Factory\Instantiator\Validations\ParseFieldValue;
 use Lkt\Factory\Instantiator\Validations\ValidateFieldValue;
 use Lkt\Factory\Schemas\Fields\AbstractField;
-use Lkt\Factory\Schemas\Fields\BooleanField;
-use Lkt\Factory\Schemas\Fields\ColorField;
-use Lkt\Factory\Schemas\Fields\DateTimeField;
-use Lkt\Factory\Schemas\Fields\EmailField;
-use Lkt\Factory\Schemas\Fields\FileField;
-use Lkt\Factory\Schemas\Fields\FloatField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
-use Lkt\Factory\Schemas\Fields\ForeignKeysField;
-use Lkt\Factory\Schemas\Fields\HTMLField;
-use Lkt\Factory\Schemas\Fields\IntegerField;
-use Lkt\Factory\Schemas\Fields\JSONField;
-use Lkt\Factory\Schemas\Fields\StringField;
-use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\Factory\Schemas\Values\ComponentValue;
 
@@ -88,46 +76,6 @@ final class RawResultsToInstanceConverter
             $value = isset($data[$field->getName()]) ? $data[$field->getName()] : null;
             $status = ValidateFieldValue::validate($field, $value);
             $key = trim('has' . ucfirst($field->getName()));
-
-//            if ($field instanceof HTMLField) {
-//                $status = $value !== '';
-//            }
-//
-//            if ($field instanceof StringField
-//                || $field instanceof EmailField
-//                || $field instanceof ColorField
-//                || $field instanceof ForeignKeysField) {
-//                $status = $value !== '';
-//            }
-//
-//            if ($field instanceof BooleanField) {
-//                $status = $value === true;
-//            }
-//
-//            if ($field instanceof IntegerField) {
-//                $status = $value > 0;
-//            }
-//
-//            if ($field instanceof FloatField) {
-//                $status = $value > 0;
-//            }
-//
-//            if ($field instanceof UnixTimeStampField) {
-//                $status = $value !== null;
-//            }
-//
-//            if ($field instanceof DateTimeField) {
-//                $status = $value !== null;
-//            }
-//
-//            if ($field instanceof JSONField) {
-//                $status = $value !== null;
-//            }
-//
-//            if ($field instanceof FileField) {
-//                $status = $value !== null;
-//            }
-
             $result[$key] = $status;
             return $result;
         }

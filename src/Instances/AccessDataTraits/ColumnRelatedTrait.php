@@ -67,11 +67,10 @@ trait ColumnRelatedTrait
         }
 
         // @todo
-//        $order = $field['order'];
-//        if (!is_array($order)){
-//            $order = [];
-//        }
-        $order = [];
+        $order = $field->getOrder();
+        if (!is_array($order)){
+            $order = [];
+        }
 
         return factory($type)
             ->where(implode(' AND ', $where))

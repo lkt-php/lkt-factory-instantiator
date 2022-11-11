@@ -4,6 +4,8 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\Factory\FactorySettings;
 use Lkt\Factory\InstanceFactory;
+use Lkt\Factory\Schemas\Fields\RelatedKeysField;
+use Lkt\Factory\Schemas\Schema;
 
 /**
  * Trait ColumnRelatedKeysTrait
@@ -48,19 +50,22 @@ trait ColumnRelatedKeysTrait
             return null;
         }
 
-        $idColumn = FactorySettings::getComponentIdColumn(static::GENERATED_TYPE);
-        $fields = FactorySettings::getComponentFields(static::GENERATED_TYPE);
-        $field = $fields[$column];
-        $where = $field['where'];
+        $schema = Schema::get(static::GENERATED_TYPE);
+        $idColumn = $schema->getIdentifiers()[0]->getColumn();
+
+        /** @var RelatedKeysField $field */
+        $field = $schema->getField($column);
+        $column = $field->getColumn();
+        $where = $field->getWhere();
         if (!is_array($where)) {
             $where = [];
         }
 
         $constraints = [];
-        $constraints[] = "{$field['column']} LIKE '%;{$this->DATA[$idColumn]};%'";
-        $constraints[] = "{$field['column']} LIKE '{$this->DATA[$idColumn]};%'";
-        $constraints[] = "{$field['column']} LIKE '%;{$this->DATA[$idColumn]}'";
-        $constraints[] = "{$field['column']} LIKE '{$this->DATA[$idColumn]}'";
+        $constraints[] = "{$column} LIKE '%;{$this->DATA[$idColumn]};%'";
+        $constraints[] = "{$column} LIKE '{$this->DATA[$idColumn]};%'";
+        $constraints[] = "{$column} LIKE '%;{$this->DATA[$idColumn]}'";
+        $constraints[] = "{$column} LIKE '{$this->DATA[$idColumn]}'";
 
         $where[] = implode(' OR ', $constraints);
         $whereString = '';
@@ -70,7 +75,7 @@ trait ColumnRelatedKeysTrait
         }
 
 
-        $order = $field['order'];
+        $order = $field->getOrder();
         if (!is_array($order)) {
             $order = [];
         }
