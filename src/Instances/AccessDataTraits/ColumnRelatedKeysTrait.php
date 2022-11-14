@@ -7,11 +7,7 @@ use Lkt\Factory\InstanceFactory;
 use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Schema;
 
-/**
- * Trait ColumnRelatedKeysTrait
- *
- * @package Lkt\Factory\Instantiator\Instances\AccessDataTraits
- */
+
 trait ColumnRelatedKeysTrait
 {
     /**

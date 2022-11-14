@@ -6,6 +6,8 @@ use Lkt\DatabaseConnectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instantiator;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
 
@@ -52,8 +54,8 @@ abstract class AbstractInstance
      * @param string $component
      * @param array $initialData
      * @return static
-     * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
-     * @throws \Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
     public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): self
     {

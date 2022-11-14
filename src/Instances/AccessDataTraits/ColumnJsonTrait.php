@@ -6,10 +6,7 @@ use Lkt\Factory\FactorySettings;
 use Lkt\Factory\Schemas\Fields\JSONField;
 use Lkt\Factory\ValidateData\DataValidator;
 
-/**
- * Trait ColumnJsonTrait
- * @package Lkt\Factory\Instantiator\Instances\AccessDataTraits
- */
+
 trait ColumnJsonTrait
 {
     /**

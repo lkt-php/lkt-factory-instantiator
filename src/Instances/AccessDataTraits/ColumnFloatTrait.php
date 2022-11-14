@@ -5,10 +5,7 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 use Lkt\Factory\Parsers\DataParser;
 use Lkt\Factory\ValidateData\DataValidator;
 
-/**
- * Trait ColumnIntegerTrait
- * @package Lkt\Factory\Instantiator\Instances\AccessDataTraits
- */
+
 trait ColumnFloatTrait
 {
     /**

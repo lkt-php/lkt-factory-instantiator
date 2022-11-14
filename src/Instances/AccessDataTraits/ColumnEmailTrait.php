@@ -4,10 +4,7 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\Factory\ValidateData\DataValidator;
 
-/**
- * Trait ColumnEmailTrait
- * @package Lkt\Factory\Instantiator\Instances\AccessDataTraits
- */
+
 trait ColumnEmailTrait
 {
     /**

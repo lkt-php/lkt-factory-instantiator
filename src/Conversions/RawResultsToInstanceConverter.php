@@ -4,6 +4,8 @@ namespace Lkt\Factory\Instantiator\Conversions;
 
 use Lkt\Factory\Instantiator\Validations\ParseFieldValue;
 use Lkt\Factory\Instantiator\Validations\ValidateFieldValue;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Schema;
@@ -18,8 +20,8 @@ final class RawResultsToInstanceConverter
     /**
      * @param string $component
      * @param array $data
-     * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
-     * @throws \Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
     public function __construct(string $component, array $data)
     {
@@ -30,7 +32,7 @@ final class RawResultsToInstanceConverter
 
     /**
      * @return array
-     * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
+     * @throws InvalidComponentException
      */
     final public function parse(): array
     {
@@ -40,7 +42,8 @@ final class RawResultsToInstanceConverter
 
     /**
      * @return array
-     * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
     private function parseData(): array
     {
@@ -65,7 +68,8 @@ final class RawResultsToInstanceConverter
     /**
      * @param array $data
      * @return array
-     * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
     private function checkData(array $data = []): array
     {

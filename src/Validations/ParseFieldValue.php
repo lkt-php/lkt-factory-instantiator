@@ -3,6 +3,8 @@
 namespace Lkt\Factory\Instantiator\Validations;
 
 
+use Carbon\Carbon;
+use chillerlan\Filereader\File;
 use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\ColorField;
@@ -19,6 +21,11 @@ use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
 
 class ParseFieldValue
 {
+    /**
+     * @param AbstractField $field
+     * @param $value
+     * @return array|bool|Carbon|File|float|int|string|null
+     */
     public static function parse(AbstractField $field, $value = null)
     {
         if ($field instanceof HTMLField) {

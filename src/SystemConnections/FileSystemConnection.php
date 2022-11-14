@@ -6,8 +6,12 @@ use chillerlan\Filereader\Drivers\DiskDriver;
 
 final class FileSystemConnection
 {
+    /** @var DiskDriver */
     private static $diskDriver;
 
+    /**
+     * @return DiskDriver
+     */
     public static function getDiskDriver()
     {
         if (!is_object(FileSystemConnection::$diskDriver)) {

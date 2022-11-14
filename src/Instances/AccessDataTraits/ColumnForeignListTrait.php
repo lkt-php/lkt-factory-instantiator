@@ -7,11 +7,7 @@ use Lkt\Factory\InstanceFactory;
 use Lkt\Factory\Schemas\Fields\ForeignKeysField;
 use Lkt\Factory\ValidateData\DataValidator;
 
-/**
- * Trait ColumnForeignListTrait
- *
- * @package Lkt\Factory\Instantiator\Instances\AccessDataTraits
- */
+
 trait ColumnForeignListTrait
 {
     /**

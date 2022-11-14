@@ -5,10 +5,7 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\Factory\ValidateData\DataValidator;
 
-/**
- * Trait ColumnStringTrait
- * @package Lkt\Factory\Instantiator\Instances\AccessDataTraits
- */
+
 trait ColumnBooleanTrait
 {
     /**

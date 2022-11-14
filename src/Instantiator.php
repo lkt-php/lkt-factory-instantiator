@@ -3,6 +3,8 @@
 namespace Lkt\Factory\Instantiator;
 
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
+use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Schema;
 
 class Instantiator
@@ -18,6 +20,14 @@ class Instantiator
     }
 
 
+    /**
+     * @param string $component
+     * @param $id
+     * @param array $data
+     * @return Instances\AbstractInstance|mixed|null
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
+     */
     public static function make(string $component, $id, array $data = [])
     {
         $code = static::getInstanceCode($component, $id);

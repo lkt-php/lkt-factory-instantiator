@@ -5,10 +5,7 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 use Carbon\Carbon;
 use Lkt\Factory\ValidateData\DataValidator;
 
-/**
- * Trait ColumnDateTimeTrait
- * @package Lkt\Factory\Instantiator\Instances\AccessDataTraits
- */
+
 trait ColumnDateTimeTrait
 {
     /**
