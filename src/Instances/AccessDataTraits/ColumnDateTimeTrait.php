@@ -3,43 +3,46 @@
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Carbon\Carbon;
-use Lkt\Factory\ValidateData\DataValidator;
-
+use DateTime;
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 
 trait ColumnDateTimeTrait
 {
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return Carbon|null
      */
-    protected function _getDateTimeVal(string $field)
+    protected function _getDateTimeVal(string $fieldName): ?Carbon
     {
-        if (isset($this->UPDATED[$field])) {
-            return $this->UPDATED[$field];
+        if (isset($this->UPDATED[$fieldName]) && $this->UPDATED[$fieldName] instanceof Carbon) {
+            return $this->UPDATED[$fieldName];
         }
-        return $this->DATA[$field];
+        if ($this->DATA[$fieldName] instanceof Carbon) {
+            return $this->DATA[$fieldName];
+        }
+        return null;
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @param string|null $format
      * @return string
      */
-    protected function _getDateTimeFormattedVal(string $field, string $format = null) :string
+    protected function _getDateTimeFormattedVal(string $fieldName, string $format = null) :string
     {
-        if (!$this->_hasDateTimeVal($field)) {
+        if (!$this->_hasDateTimeVal($fieldName)) {
             return '';
         }
-        return $this->_getDateTimeVal($field)->format($format);
+        return $this->_getDateTimeVal($fieldName)->format($format);
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _hasDateTimeVal(string $field) :bool
+    protected function _hasDateTimeVal(string $fieldName) :bool
     {
-        $checkField = 'has'.ucfirst($field);
+        $checkField = 'has'.ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -47,25 +50,32 @@ trait ColumnDateTimeTrait
     }
 
     /**
-     * @param string $field
-     * @param Carbon|\DateTime|string|int|null $value
+     * @param string $fieldName
+     * @param Carbon|DateTime|string|int|null $value
+     * @return void
+     * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
+     * @throws \Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException
      */
-    protected function _setDateTimeVal(string $field, $value = null)
+    protected function _setDateTimeVal(string $fieldName, $value = null)
     {
-        $realValue = null;
-        if ($value instanceof \DateTime) {
-            $realValue = $value->format('Y-m-d H:i:s');
-        } elseif ($value instanceof Carbon) {
-            $realValue = $value->format('Y-m-d H:i:s');
-        } elseif (is_string($value)) {
-            $realValue = $value;
+        $raeValueToConvert = null;
+         if ($value instanceof Carbon) {
+             $raeValueToConvert = $value->format('Y-m-d H:i:s');
+
+         } elseif ($value instanceof DateTime) {
+             $raeValueToConvert = $value->format('Y-m-d H:i:s');
+
+         } elseif (is_string($value)) {
+            $raeValueToConvert = $value;
+
         } elseif (is_int($value)) {
-            $realValue = date('Y-m-d H:i:s', $value);
+            $raeValueToConvert = date('Y-m-d H:i:s', $value);
         }
 
-        DataValidator::getInstance($this->TYPE, [
-            $field => $realValue,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $raeValueToConvert,
         ]);
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 }

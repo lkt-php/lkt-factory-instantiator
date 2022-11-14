@@ -5,6 +5,18 @@ namespace Lkt\Factory\Instantiator\Instances;
 use Lkt\DatabaseConnectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnDateTimeTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnEmailTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnFileTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnFloatTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnForeignListTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnForeignTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnIntegerTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnJsonTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
@@ -13,6 +25,19 @@ use Lkt\QueryCaller\QueryCaller;
 
 abstract class AbstractInstance
 {
+    use ColumnStringTrait,
+        ColumnIntegerTrait,
+        ColumnFloatTrait,
+        ColumnEmailTrait,
+        ColumnBooleanTrait,
+        ColumnColorTrait,
+        ColumnJsonTrait,
+        ColumnFileTrait,
+        ColumnForeignTrait,
+        ColumnForeignListTrait,
+        ColumnRelatedTrait,
+        ColumnDateTimeTrait;
+
     protected $TYPE;
     protected $DATA = [];
     protected $UPDATED = [];
@@ -105,5 +130,13 @@ abstract class AbstractInstance
         }
 
         return new static();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAnonymous() :bool
+    {
+        return count($this->DATA) === 0;
     }
 }

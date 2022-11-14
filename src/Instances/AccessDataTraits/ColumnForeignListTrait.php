@@ -2,24 +2,32 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Factory\FactorySettings;
-use Lkt\Factory\InstanceFactory;
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Instantiator\Instances\AbstractInstance;
+use Lkt\Factory\Instantiator\Instantiator;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\ForeignKeysField;
-use Lkt\Factory\ValidateData\DataValidator;
-
+use Lkt\Factory\Schemas\Schema;
 
 trait ColumnForeignListTrait
 {
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return array
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _getForeignListIds(string $field) :array
+    protected function _getForeignListIds(string $fieldName) :array
     {
-        /** @var ForeignKeysField $fieldData */
-        $fieldData = FactorySettings::getComponentField(static::GENERATED_TYPE, $field);
-        $allowAnonymous = $fieldData->anonymousAllowed();
-        $items = explode(';', trim($this->_getForeignListVal($field)));
+        $schema = Schema::get(static::GENERATED_TYPE);
+
+        /** @var ForeignKeysField $field */
+        $field = $schema->getField($fieldName);
+        $allowAnonymous = $field->anonymousAllowed();
+
+        $items = explode(';', trim($this->_getForeignListVal($fieldName)));
         $items = array_filter($items, function ($item) use ($allowAnonymous) {
             $t = trim($item);
             if ($t === ''){
@@ -33,24 +41,30 @@ trait ColumnForeignListTrait
 
         return array_values($items);
     }
-    /**
-     * @param string $field
-     * @return array
-     */
-    protected function _getForeignListData(string $field) :array
-    {
-        /** @var ForeignKeysField $fieldData */
-        $fieldData = FactorySettings::getComponentField(static::GENERATED_TYPE, $field);
 
-        $items = $this->_getForeignListIds($field);
+    /**
+     * @param string $fieldName
+     * @return array
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     * @throws InvalidSchemaAppClassException
+     */
+    protected function _getForeignListData(string $fieldName) :array
+    {
+        $schema = Schema::get(static::GENERATED_TYPE);
+
+        /** @var ForeignKeysField $field */
+        $field = $schema->getField($fieldName);
+
+
+        $items = $this->_getForeignListIds($fieldName);
 
         $r = [];
 
         foreach ($items as $item){
             if (is_numeric($item)){
-                /** @var \Lkt\Factory\AbstractInstances\AbstractInstance $t */
-                $t = InstanceFactory::getInstance($fieldData->getComponent(), $item)->instance();
-                if (!$t->isAnonymous()){
+                $t = Instantiator::make($field->getComponent(), $item);
+                if ($t instanceof AbstractInstance && !$t->isAnonymous()){
                     $r[] = $t;
                 }
             } else {
@@ -62,24 +76,24 @@ trait ColumnForeignListTrait
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return string
      */
-    protected function _getForeignListVal(string $field) :string
+    protected function _getForeignListVal(string $fieldName) :string
     {
-        if (isset($this->UPDATED[$field])) {
-            return $this->UPDATED[$field];
+        if (isset($this->UPDATED[$fieldName])) {
+            return $this->UPDATED[$fieldName];
         }
-        return trim($this->DATA[$field]);
+        return trim($this->DATA[$fieldName]);
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _hasForeignListVal(string $field) :bool
+    protected function _hasForeignListVal(string $fieldName) :bool
     {
-        $checkField = 'has'.ucfirst($field);
+        $checkField = 'has'.ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -87,20 +101,22 @@ trait ColumnForeignListTrait
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @param string|array|null $value
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _setForeignListVal(string $field, $value = null)
+    protected function _setForeignListVal(string $fieldName, $value = null)
     {
         if (is_array($value)){
             $value = implode(';', $value);
         } elseif (!is_string($value)){
             $value = trim($value);
         }
-        $checkField = 'has'.ucfirst($field);
-        DataValidator::getInstance($this->TYPE, [
-            $field => $value,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $value,
         ]);
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 }

@@ -5,6 +5,8 @@
   "version": "1.0.1",
   "require": {
     "php": ">=7.2.0",
+    "ext-intl": "*",
+    "ext-json": "*",
     "nesbot/carbon": "^2.62",
     "chillerlan/php-filereader": "^2.0",
     "lkt/column-types": "^1.0",

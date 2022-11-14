@@ -2,21 +2,29 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Drivers\MySql;
-use Lkt\Factory\FactorySettings;
+use Lkt\DatabaseConnectors\DatabaseConnections;
+use Lkt\Factory\Instantiator\Cache\InstanceCache;
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Instantiator\Instantiator;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Schema;
-use function Lkt\Factory\factory;
+use Lkt\QueryBuilding\Where;
+use Lkt\QueryCaller\QueryCaller;
 
 trait ColumnRelatedTrait
 {
     /**
      * @param string $type
-     * @param string $column
-     * @param bool $forceRefresh
+     * @param $column
+     * @param $forceRefresh
      * @return array
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedVal($type = '', $column = '', $forceRefresh = false) :array
+    protected function _getRelatedVal(string $type = '', $column = '', $forceRefresh = false) :array
     {
         if (!$forceRefresh && isset($this->UPDATED_RELATED_DATA[$column])) {
             return $this->UPDATED_RELATED_DATA[$column];
@@ -33,20 +41,39 @@ trait ColumnRelatedTrait
             return [];
         }
 
-        $r = $this->_getRelatedInstanceFactory($type, $column, $forceRefresh);
+        $caller = $this->_getRelatedInstanceFactory($type, $column, $forceRefresh);
 
-        if ($r) {
-            $r = $r->query();
+        $data = $caller->select();
+
+        $results = [];
+        if (count($data) > 0) {
+
+            $relatedSchema = Schema::get($type);
+            $relatedIdentifiers = $relatedSchema->getIdentifiers();
+            $identifier = $relatedIdentifiers[0];
+
+            foreach ($data as $item) {
+                $itemId = $item[$identifier->getName()];
+
+                $converter = new RawResultsToInstanceConverter($type, $data[0]);
+                $itemData = $converter->parse();
+
+                $r = new static($itemId, $type, $itemData);
+                $r->setData($itemData);
+                $code = Instantiator::getInstanceCode($type, $itemId);
+                InstanceCache::store($code, $r);
+                $results[] = $r;
+            }
         }
 
-        if (!is_array($r)) {
-            $r = [];
-        }
-
-        $this->RELATED_DATA[$column] = $r;
+        $this->RELATED_DATA[$column] = $results;
         return $this->RELATED_DATA[$column];
     }
 
+    /**
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
     protected function _getRelatedInstanceFactory($type = '', $column = '', $forceRefresh = false)
     {
         if (!$type) {
@@ -58,25 +85,34 @@ trait ColumnRelatedTrait
         $idColumn = $schema->getIdString();
         /** @var RelatedField $field */
         $field = $schema->getField($column);
+
         $where = $field->getWhere();
         if (!is_array($where)){
             $where = [];
         }
+
         if ($this->DATA[$idColumn]) {
-            $where[] = MySql::makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
+            $connector = $schema->getDatabaseConnector();
+            if ($connector === '') {
+                $connector = DatabaseConnections::$defaultConnector;
+            }
+            $connection = DatabaseConnections::get($connector);
+            $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
         }
 
-        // @todo
         $order = $field->getOrder();
         if (!is_array($order)){
             $order = [];
         }
 
-        return factory($type)
-            ->where(implode(' AND ', $where))
-            ->orderBy(implode(',', $order))
-            ->forceRefresh($forceRefresh)
-            ;
+        $caller = QueryCaller::table($type);
+        $caller->where(Where::raw(implode(' AND ', $where)));
+        $caller->orderBy(implode(',', $order));
+        $caller->setForceRefresh($forceRefresh);
+
+        return $caller;
+
+
     }
 
     /**
@@ -89,17 +125,24 @@ trait ColumnRelatedTrait
         return count($this->_getRelatedVal($type)) > 0;
     }
 
+    /**
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
+     */
     protected function _setRelatedValWithData($type = '', $column = '', $data = [])
     {
         $this->PENDING_UPDATE_RELATED_DATA[$column] = $data;
 
-        $relatedIdColumn = FactorySettings::getComponentIdColumn($type);
-        $relatedClass = FactorySettings::getComponentClassName($type);
+        $schema = Schema::get($type);
+        $relatedIdColumn = $schema->getIdColumn();
+
+        $relatedClass = $schema->getInstanceSettings()->getAppClass();
 
         $r = [];
 
         foreach ($data as $datum){
-            $instance = $relatedClass::getInstance($datum[$relatedIdColumn]);
+            $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
             $instance->hydrate($datum);
             $r[] = $instance;
         }

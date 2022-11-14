@@ -2,41 +2,49 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Factory\FactorySettings;
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\JSONField;
-use Lkt\Factory\ValidateData\DataValidator;
-
+use Lkt\Factory\Schemas\Schema;
+use StdClass;
 
 trait ColumnJsonTrait
 {
     /**
-     * @param string $field
-     * @return string
+     * @param string $fieldName
+     * @return array|StdClass
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _getJsonVal(string $field)
+    protected function _getJsonVal(string $fieldName)
     {
-        $r = [];
-        if (isset($this->UPDATED[$field])) {
-            $r = $this->UPDATED[$field];
+        if (isset($this->UPDATED[$fieldName])) {
+            $r = $this->UPDATED[$fieldName];
         } else {
-            $r = $this->DATA[$field];
+            $r = $this->DATA[$fieldName];
         }
 
-        $field = FactorySettings::getComponentField(static::GENERATED_TYPE, $field);
+        $schema = Schema::get(static::GENERATED_TYPE);
         /** @var JSONField $field */
+        $field = $schema->getField($fieldName);
+
         if ($field->isAssoc()){
+            /** @var array $r */
             return $r;
         }
-        return json_decode(json_encode($r));
+        /** @var StdClass $r */
+        $r = json_decode(json_encode($r));
+        return $r;
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _hasJsonVal(string $field) :bool
+    protected function _hasJsonVal(string $fieldName) :bool
     {
-        $checkField = 'has'.ucfirst($field);
+        $checkField = 'has'.ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -44,10 +52,13 @@ trait ColumnJsonTrait
     }
 
     /**
-     * @param string $field
-     * @param string|null $value
+     * @param string $fieldName
+     * @param $value
+     * @return void
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _setJsonVal(string $field, $value = null)
+    protected function _setJsonVal(string $fieldName, $value = null)
     {
         if (is_object($value)){
             $value = json_decode(json_encode($value), true);
@@ -55,10 +66,9 @@ trait ColumnJsonTrait
         } elseif (!is_array($value)){
             $value = [];
         }
-        $checkField = 'has'.ucfirst($field);
-        DataValidator::getInstance($this->TYPE, [
-            $field => $value,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $value,
         ]);
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 }

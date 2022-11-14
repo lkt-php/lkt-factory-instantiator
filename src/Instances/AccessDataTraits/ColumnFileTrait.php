@@ -3,30 +3,34 @@
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use chillerlan\Filereader\File;
-use Lkt\Factory\ValidateData\DataValidator;
-
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 
 trait ColumnFileTrait
 {
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return File|null
      */
-    protected function _getFileVal(string $field)
+    protected function _getFileVal(string $fieldName): ?File
     {
-        if (isset($this->UPDATED[$field])) {
-            return $this->UPDATED[$field];
+        if (isset($this->UPDATED[$fieldName]) && $this->UPDATED[$fieldName] instanceof File) {
+            return $this->UPDATED[$fieldName];
         }
-        return $this->DATA[$field];
+        if ($this->DATA[$fieldName] instanceof File) {
+            return $this->DATA[$fieldName];
+        }
+        return null;
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _hasFileVal(string $field) :bool
+    protected function _hasFileVal(string $fieldName) :bool
     {
-        $checkField = 'has'.ucfirst($field);
+        $checkField = 'has'.ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -34,35 +38,49 @@ trait ColumnFileTrait
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @param string|null $value
+     * @return void
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _setFileVal(string $field, string $value = null)
+    protected function _setFileVal(string $fieldName, string $value = null)
     {
-        $checkField = 'has'.ucfirst($field);
-        DataValidator::getInstance($this->TYPE, [
-            $field => $value,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $value,
         ]);
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return string
      */
-    protected function _getInternalPath(string $field)
+    protected function _getInternalPath(string $fieldName): string
     {
-        $file = $this->_getFileVal($field);
+        $file = $this->_getFileVal($fieldName);
         return $file->directory->path;
     }
 
     /**
-     * @param string $field
-     * @param string $src
+     * @param string $fieldName
+     * @return string
      */
-    protected function _setInternalPath(string $field, string $src)
+    protected function _getFileName(string $fieldName): string
     {
-        $file = $this->_getFileVal($field);
+        $file = $this->_getFileVal($fieldName);
+        return $file->name;
+    }
+
+    /**
+     * @param string $fieldName
+     * @param string $src
+     * @return void
+     */
+    protected function _setInternalPath(string $fieldName, string $src)
+    {
+        $file = $this->_getFileVal($fieldName);
         $file->directory->change($src);
     }
 }

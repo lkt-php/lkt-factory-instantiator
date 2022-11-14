@@ -2,37 +2,37 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Factory\Schemas\Schema;
-use Lkt\Factory\ValidateData\DataValidator;
-
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 
 trait ColumnBooleanTrait
 {
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _getBooleanVal(string $field) :bool
+    protected function _getBooleanVal(string $fieldName): bool
     {
-        if (isset($this->UPDATED[$field])) {
-            return $this->UPDATED[$field];
+        if (isset($this->UPDATED[$fieldName])) {
+            return $this->UPDATED[$fieldName];
         }
-        return $this->DATA[$field] === true;
+        return $this->DATA[$fieldName] === true;
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @param bool $value
+     * @return void
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _setBooleanVal(string $field, bool $value = false)
+    protected function _setBooleanVal(string $fieldName, bool $value = false): void
     {
-        $checkField = 'has'.ucfirst($field);
-        DataValidator::getInstance($this->TYPE, [
-            $field => $value,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $value,
         ]);
-//        $schema = Schema::get($this->TYPE);
-        //@todo: auto validate data
 
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 }

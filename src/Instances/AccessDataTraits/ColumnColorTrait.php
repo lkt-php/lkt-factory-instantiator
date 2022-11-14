@@ -2,34 +2,36 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Factory\ValidateData\DataValidator;
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use function Lkt\Tools\Color\decToHex;
 use function Lkt\Tools\Color\hexToDec;
-
 
 trait ColumnColorTrait
 {
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return string
      */
-    protected function _getColorVal(string $field) :string
+    protected function _getColorVal(string $fieldName) :string
     {
-        if (isset($this->UPDATED[$field])) {
-            return $this->UPDATED[$field];
+        if (isset($this->UPDATED[$fieldName])) {
+            return $this->UPDATED[$fieldName];
         }
-        return trim($this->DATA[$field]);
+        return trim($this->DATA[$fieldName]);
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
+     * @param float|null $opacity
      * @return array
      */
-    protected function _getColorRgbVal(string $field, float $opacity = null) :array
+    protected function _getColorRgbVal(string $fieldName, float $opacity = null) :array
     {
-        $r = trim($this->DATA[$field]);
-        if (isset($this->UPDATED[$field])) {
-            $r = trim($this->UPDATED[$field]);
+        $r = trim($this->DATA[$fieldName]);
+        if (isset($this->UPDATED[$fieldName])) {
+            $r = trim($this->UPDATED[$fieldName]);
         }
 
         $r = hexToDec($r);
@@ -40,9 +42,14 @@ trait ColumnColorTrait
         return $r;
     }
 
-    protected function _getColorRgbStringVal(string $field, float $opacity = null) :string
+    /**
+     * @param string $fieldName
+     * @param float|null $opacity
+     * @return string
+     */
+    protected function _getColorRgbStringVal(string $fieldName, float $opacity = null) :string
     {
-        $color = $this->_getColorRgbVal($field, $opacity);
+        $color = $this->_getColorRgbVal($fieldName, $opacity);
         $base = 'rgb';
         if (count($color) === 4) {
             $base .= 'a';
@@ -54,12 +61,12 @@ trait ColumnColorTrait
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _hasColorVal(string $field) :bool
+    protected function _hasColorVal(string $fieldName) :bool
     {
-        $checkField = 'has'.ucfirst($field);
+        $checkField = 'has'.ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -67,19 +74,22 @@ trait ColumnColorTrait
     }
 
     /**
-     * @param string $field
-     * @param string|array|null $value
+     * @param string $fieldName
+     * @param $value
+     * @return void
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _setColorVal(string $field, $value = null)
+    protected function _setColorVal(string $fieldName, $value = null)
     {
-        $checkField = 'has'.ucfirst($field);
         $v = $value;
         if (is_array($v)) {
             $v = decToHex($v);
         }
-        DataValidator::getInstance($this->TYPE, [
-            $field => $v,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $v,
         ]);
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 }

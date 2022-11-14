@@ -2,15 +2,16 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Factory\Parsers\DataParser;
-use Lkt\Factory\ValidateData\DataValidator;
-
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Instantiator\SystemConnections\NumberFormatter;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 
 trait ColumnFloatTrait
 {
     /**
      * @param string $field
-     * @return string
+     * @return float
      */
     protected function _getFloatVal(string $field) :float
     {
@@ -21,22 +22,22 @@ trait ColumnFloatTrait
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return string
      */
-    protected function _getFloatFormattedVal(string $field) :string
+    protected function _getFloatFormattedVal(string $fieldName) :string
     {
-        $formatter = DataParser::getDecimalNumberFormatter();
-        return $formatter->format($this->_getFloatVal($field));
+        $formatter = NumberFormatter::getDecimalNumberFormatter();
+        return $formatter->format($this->_getFloatVal($fieldName));
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _hasFloatVal(string $field) :bool
+    protected function _hasFloatVal(string $fieldName) :bool
     {
-        $checkField = 'has'.ucfirst($field);
+        $checkField = 'has'.ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -44,15 +45,18 @@ trait ColumnFloatTrait
     }
 
     /**
-     * @param string $field
-     * @param int|null $value
+     * @param string $fieldName
+     * @param float|null $value
+     * @return void
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _setFloatVal(string $field, float $value = null)
+    protected function _setFloatVal(string $fieldName, float $value = null): void
     {
-        $checkField = 'has'.ucfirst($field);
-        DataValidator::getInstance($this->TYPE, [
-            $field => $value,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $value,
         ]);
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 }

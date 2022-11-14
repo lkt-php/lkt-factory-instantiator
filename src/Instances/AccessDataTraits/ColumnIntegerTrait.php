@@ -2,30 +2,31 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Factory\ValidateData\DataValidator;
-
+use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 
 trait ColumnIntegerTrait
 {
     /**
-     * @param string $field
-     * @return string
+     * @param string $fieldName
+     * @return int
      */
-    protected function _getIntegerVal(string $field) :int
+    protected function _getIntegerVal(string $fieldName) :int
     {
-        if (isset($this->UPDATED[$field])) {
-            return $this->UPDATED[$field];
+        if (isset($this->UPDATED[$fieldName])) {
+            return $this->UPDATED[$fieldName];
         }
-        return (int)$this->DATA[$field];
+        return (int)$this->DATA[$fieldName];
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @return bool
      */
-    protected function _hasIntegerVal(string $field) :bool
+    protected function _hasIntegerVal(string $fieldName) :bool
     {
-        $checkField = 'has'.ucfirst($field);
+        $checkField = 'has'.ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -33,16 +34,17 @@ trait ColumnIntegerTrait
     }
 
     /**
-     * @param string $field
+     * @param string $fieldName
      * @param int|null $value
+     * @return void
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
      */
-    protected function _setIntegerVal(string $field, int $value = null)
+    protected function _setIntegerVal(string $fieldName, int $value = null): void
     {
-        $checkField = 'has'.ucfirst($field);
-        DataValidator::getInstance($this->TYPE, [
-            $field => $value,
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $value,
         ]);
-
-        $this->UPDATED = $this->UPDATED + DataValidator::getResult();
+        $this->UPDATED = $this->UPDATED + $converter->parse();
     }
 }
