@@ -4,18 +4,25 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\DatabaseConnectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Instantiator;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\Where;
 use Lkt\QueryCaller\QueryCaller;
 
 trait ColumnRelatedKeysTrait
 {
     /**
-     * @param string $type
-     * @param string $column
-     * @param bool $forceRefresh
+     * @param $type
+     * @param $column
+     * @param $forceRefresh
      * @return array
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
      */
     protected function _getRelatedKeysVal($type = '', $column = '', $forceRefresh = false): array
     {
@@ -41,6 +48,14 @@ trait ColumnRelatedKeysTrait
         return $this->RELATED_DATA[$column];
     }
 
+    /**
+     * @param $type
+     * @param $column
+     * @param $forceRefresh
+     * @return Query|QueryCaller|null
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
     protected function _getRelatedKeysInstanceFactory($type = '', $column = '', $forceRefresh = false)
     {
         if (!$type) {
@@ -54,9 +69,6 @@ trait ColumnRelatedKeysTrait
         $field = $schema->getField($column);
         $column = $field->getColumn();
         $where = $field->getWhere();
-        if (!is_array($where)) {
-            $where = [];
-        }
 
         $constraints = [];
         $constraints[] = "{$column} LIKE '%;{$this->DATA[$idColumn]};%'";
@@ -72,9 +84,6 @@ trait ColumnRelatedKeysTrait
         }
 
         $order = $field->getOrder();
-        if (!is_array($order)) {
-            $order = [];
-        }
 
         $relatedSchema = Schema::get($field->getComponent());
         $caller = QueryCaller::table($relatedSchema->getTable());
@@ -89,17 +98,15 @@ trait ColumnRelatedKeysTrait
         $caller->orderBy(implode(',', $order));
         $caller->setForceRefresh($forceRefresh);
         return $caller;
-
-        return InstanceFactory::getInstance($type)
-            ->where($whereString)
-            ->orderBy(implode(',', $order))
-            ->forceRefresh($forceRefresh);
     }
 
     /**
-     * @param string $type
-     * @param string $column
+     * @param $type
+     * @param $column
      * @return bool
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
      */
     protected function _hasRelatedKeysVal($type = '', $column = ''): bool
     {

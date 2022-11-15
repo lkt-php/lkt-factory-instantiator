@@ -21,8 +21,8 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
-use Lkt\Factory\Schemas\Fields\PivotField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
 
@@ -69,7 +69,6 @@ abstract class AbstractInstance
     }
 
     /**
-     * @todo: remove this after update code generation for constructor
      * @param array $initialData
      * @return $this
      */
@@ -108,16 +107,8 @@ abstract class AbstractInstance
             return InstanceCache::load($code);
         }
 
-        $schema = Schema::get($component);
+        list($caller, $connection, $schema) = Instantiator::getQueryCaller($component);
         $identifiers = $schema->getIdentifiers();
-
-        $caller = QueryCaller::table($schema->getTable());
-        $connector = $schema->getDatabaseConnector();
-        if (!$connector) {
-            $connector = DatabaseConnections::$defaultConnector;
-        }
-        $caller->setDatabaseConnector($connector);
-        $caller->extractSchemaColumns($schema);
 
         foreach ($identifiers as $identifier) {
             $caller->andIntegerEqual($identifier->getColumn(), $id);
@@ -156,5 +147,27 @@ abstract class AbstractInstance
         $schema = Schema::get(static::GENERATED_TYPE);
         $idColumn = $schema->getIdString();
         return $this->DATA[$idColumn];
+    }
+
+    /**
+     * @param string $component
+     * @return AbstractInstance|null
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
+     */
+    public function convertToComponent(string $component = ''): ?AbstractInstance
+    {
+        return Instantiator::make($component, $this->getIdColumnValue());
+    }
+
+    /**
+     * @param array $data
+     */
+    public function hydrate(array $data)
+    {
+        foreach ($data as $column => $datum){
+            $this->UPDATED[$column] = $datum;
+        }
     }
 }

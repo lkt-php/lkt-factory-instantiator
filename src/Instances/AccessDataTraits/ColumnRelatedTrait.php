@@ -73,17 +73,10 @@ trait ColumnRelatedTrait
             $where = [];
         }
 
-        $relatedSchema = Schema::get($field->getComponent());
-        $caller = QueryCaller::table($relatedSchema->getTable());
+        list($caller, $connection) = Instantiator::getQueryCaller($field->getComponent());
 
         if ($this->DATA[$idColumn]) {
-            $connector = $schema->getDatabaseConnector();
-            if ($connector === '') {
-                $connector = DatabaseConnections::$defaultConnector;
-            }
-            $connection = DatabaseConnections::get($connector);
             $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
-            $caller->setColumns($connection->extractSchemaColumns($relatedSchema));
         }
 
         $order = $field->getOrder();
