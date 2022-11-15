@@ -2,32 +2,40 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Drivers\MySql;
+use Exception;
+use Lkt\DatabaseConnectors\DatabaseConnections;
+use Lkt\Factory\Instantiator\Instantiator;
+use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
+use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
+use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
+use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\PivotField;
 use Lkt\Factory\Schemas\Schema;
-use function Lkt\Factory\factory;
+use Lkt\QueryBuilding\Where;
+use Lkt\QueryCaller\QueryCaller;
 use function Lkt\Tools\Arrays\arrayPushUnique;
 use function Lkt\Tools\Arrays\getArrayFirstPosition;
 use const Lkt\Factory\COLUMN_FOREIGN_KEY;
-
 
 trait ColumnPivotTrait
 {
     /**
      * @param string $column
      * @return void
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     * @throws InvalidSchemaAppClassException
+     * @throws Exception
      */
     private function _loadPivots(string $column)
     {
-        /** @var Schema $schema */
         $schema = Schema::get(static::GENERATED_TYPE);
 
         /** @var PivotField $field */
         $field = $schema->getField($column);
         $idColumn = $schema->getIdString();
 
-        /** @var Schema $pivotedSchema */
         $pivotedSchema = Schema::get($field->getPivotComponent());
 
         /** @var AbstractField $pivotedField */
@@ -36,19 +44,23 @@ trait ColumnPivotTrait
         $pivotedFieldColumn = trim($pivotedField->getColumn());
 
         $where = $field->getWhere();
-        if (!is_array($where)){
-            $where = [];
-        }
-        $where[] = MySql::makeUpdateParams([$pivotedFieldColumn => $this->DATA[$idColumn]]);
 
         $order = $field->getOrder();
-        if (!is_array($order)){
-            $order = [];
+        $caller = QueryCaller::table($pivotedSchema->getTable());
+
+        $connector = $schema->getDatabaseConnector();
+        if ($connector === '') {
+            $connector = DatabaseConnections::$defaultConnector;
         }
-        $pivots = factory($field->getPivotComponent())
-            ->where(implode(' AND ', $where))
-            ->orderBy(implode(',', $order))
-            ->query();
+        $connection = DatabaseConnections::get($connector);
+        $where[] = $connection->makeUpdateParams([$pivotedFieldColumn => $this->DATA[$idColumn]]);
+        $caller->setColumns($connection->extractSchemaColumns($pivotedSchema));
+
+        $caller->where(Where::raw(implode(' AND ', $where)));
+        $caller->orderBy(implode(',', $order));
+
+        $results = $caller->select();
+        $pivots = Instantiator::makeResults($pivotedSchema->getComponent(), $results);
 
         $this->PIVOT[$column] = $pivots;
     }
@@ -57,6 +69,9 @@ trait ColumnPivotTrait
     /**
      * @param string $column
      * @return array
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
      */
     protected function _getPivotVal(string $column) :array
     {
@@ -93,7 +108,7 @@ trait ColumnPivotTrait
         })));
         $getter = 'get'.ucfirst($key);
 
-        if ($fieldPivotColumn->getType() === COLUMN_FOREIGN_KEY) {
+        if ($fieldPivotColumn instanceof ForeignKeyField) {
             $getter .= 'Id';
         }
 
@@ -137,31 +152,26 @@ trait ColumnPivotTrait
 
         $order = trim(implode(', ', $order));
 
-        $r = factory($toSchema->getComponent())
-            ->where($where)
-            ->orderBy($order)
-            ->query();
+        list($caller, $connection) = Instantiator::getQueryCaller($toSchema->getComponent());
 
-        if (!is_array($r)) {
-            $r = [];
-        }
+        $caller->where(Where::raw($where));
+        $caller->orderBy($order);
 
-        $this->PIVOT_DATA[$column] = $r;
+        $results = Instantiator::makeResults($toSchema->getComponent(), $caller->select());
+
+        $this->PIVOT_DATA[$column] = $results;
         return $this->PIVOT_DATA[$column];
     }
 
     /**
-     * @param string $type
      * @param string $column
      * @return bool
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
      */
-    protected function _hasPivotVal($type = '', $column = '') :bool
+    protected function _hasPivotVal(string $column = '') :bool
     {
-        return count($this->_getRelatedVal($type)) > 0;
+        return count($this->_getPivotVal($column)) > 0;
     }
-
-//    protected function _setPivotVal($type = '', $column = '', $items = [], $deleteUnlinked = false)
-//    {
-//        $this->UPDATED[$column] = $items;
-//    }
 }

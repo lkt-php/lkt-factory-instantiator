@@ -15,11 +15,14 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnForeignListTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnForeignTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnIntegerTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnJsonTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnPivotTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\PivotField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
 
@@ -36,6 +39,8 @@ abstract class AbstractInstance
         ColumnForeignTrait,
         ColumnForeignListTrait,
         ColumnRelatedTrait,
+        ColumnRelatedKeysTrait,
+        ColumnPivotTrait,
         ColumnDateTimeTrait;
 
     protected $TYPE;
@@ -138,5 +143,18 @@ abstract class AbstractInstance
     public function isAnonymous() :bool
     {
         return count($this->DATA) === 0;
+    }
+
+
+    /**
+     * @return mixed
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    public function getIdColumnValue()
+    {
+        $schema = Schema::get(static::GENERATED_TYPE);
+        $idColumn = $schema->getIdString();
+        return $this->DATA[$idColumn];
     }
 }

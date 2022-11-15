@@ -3,8 +3,6 @@
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\DatabaseConnectors\DatabaseConnections;
-use Lkt\Factory\Instantiator\Cache\InstanceCache;
-use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
@@ -35,6 +33,8 @@ trait ColumnRelatedTrait
         }
 
         $schema = Schema::get(static::GENERATED_TYPE);
+        /** @var RelatedField $field */
+        $field = $schema->getField($column);
 
         $idColumn = $schema->getIdString();
         if (!$this->DATA[$idColumn]) {
@@ -44,27 +44,9 @@ trait ColumnRelatedTrait
         $caller = $this->_getRelatedInstanceFactory($type, $column, $forceRefresh);
 
         $data = $caller->select();
+        $relatedSchema = Schema::get($field->getComponent());
 
-        $results = [];
-        if (count($data) > 0) {
-
-            $relatedSchema = Schema::get($type);
-            $relatedIdentifiers = $relatedSchema->getIdentifiers();
-            $identifier = $relatedIdentifiers[0];
-
-            foreach ($data as $item) {
-                $itemId = $item[$identifier->getName()];
-
-                $converter = new RawResultsToInstanceConverter($type, $data[0]);
-                $itemData = $converter->parse();
-
-                $r = new static($itemId, $type, $itemData);
-                $r->setData($itemData);
-                $code = Instantiator::getInstanceCode($type, $itemId);
-                InstanceCache::store($code, $r);
-                $results[] = $r;
-            }
-        }
+        $results = Instantiator::makeResults($relatedSchema->getComponent(), $data);
 
         $this->RELATED_DATA[$column] = $results;
         return $this->RELATED_DATA[$column];
@@ -91,6 +73,9 @@ trait ColumnRelatedTrait
             $where = [];
         }
 
+        $relatedSchema = Schema::get($field->getComponent());
+        $caller = QueryCaller::table($relatedSchema->getTable());
+
         if ($this->DATA[$idColumn]) {
             $connector = $schema->getDatabaseConnector();
             if ($connector === '') {
@@ -98,6 +83,7 @@ trait ColumnRelatedTrait
             }
             $connection = DatabaseConnections::get($connector);
             $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
+            $caller->setColumns($connection->extractSchemaColumns($relatedSchema));
         }
 
         $order = $field->getOrder();
@@ -105,7 +91,6 @@ trait ColumnRelatedTrait
             $order = [];
         }
 
-        $caller = QueryCaller::table($type);
         $caller->where(Where::raw(implode(' AND ', $where)));
         $caller->orderBy(implode(',', $order));
         $caller->setForceRefresh($forceRefresh);

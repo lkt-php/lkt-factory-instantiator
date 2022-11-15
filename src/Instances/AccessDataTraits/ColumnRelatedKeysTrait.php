@@ -2,11 +2,12 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\Factory\FactorySettings;
-use Lkt\Factory\InstanceFactory;
+use Lkt\DatabaseConnectors\DatabaseConnections;
+use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Schema;
-
+use Lkt\QueryBuilding\Where;
+use Lkt\QueryCaller\QueryCaller;
 
 trait ColumnRelatedKeysTrait
 {
@@ -26,17 +27,17 @@ trait ColumnRelatedKeysTrait
             return $this->RELATED_DATA[$column];
         }
 
-        $r = $this->_getRelatedKeysInstanceFactory($type, $column, $forceRefresh);
+        $schema = Schema::get(static::GENERATED_TYPE);
+        /** @var RelatedKeysField $field */
+        $field = $schema->getField($column);
+        $caller = $this->_getRelatedKeysInstanceFactory($type, $column, $forceRefresh);
 
-        if ($r) {
-            $r = $r->query();
-        }
+        $data = $caller->select();
+        $relatedSchema = Schema::get($field->getComponent());
 
-        if (!is_array($r)) {
-            $r = [];
-        }
+        $results = Instantiator::makeResults($relatedSchema->getComponent(), $data);
 
-        $this->RELATED_DATA[$column] = $r;
+        $this->RELATED_DATA[$column] = $results;
         return $this->RELATED_DATA[$column];
     }
 
@@ -70,11 +71,24 @@ trait ColumnRelatedKeysTrait
             $whereString = '(' . implode(') AND (', $where) . ')';
         }
 
-
         $order = $field->getOrder();
         if (!is_array($order)) {
             $order = [];
         }
+
+        $relatedSchema = Schema::get($field->getComponent());
+        $caller = QueryCaller::table($relatedSchema->getTable());
+        $connector = $schema->getDatabaseConnector();
+        if ($connector === '') {
+            $connector = DatabaseConnections::$defaultConnector;
+        }
+        $connection = DatabaseConnections::get($connector);
+        $caller->setColumns($connection->extractSchemaColumns($relatedSchema));
+
+        $caller->where(Where::raw($whereString));
+        $caller->orderBy(implode(',', $order));
+        $caller->setForceRefresh($forceRefresh);
+        return $caller;
 
         return InstanceFactory::getInstance($type)
             ->where($whereString)
@@ -96,8 +110,15 @@ trait ColumnRelatedKeysTrait
     {
         $this->PENDING_UPDATE_RELATED_DATA[$column] = $data;
 
-        $relatedIdColumn = FactorySettings::getComponentIdColumn($type);
-        $relatedClass = FactorySettings::getComponentClassName($type);
+        $schema = Schema::get($type);
+        /** @var RelatedKeysField $field */
+        $field = $schema->getField($column);
+
+        $relatedSchema = Schema::get($field->getComponent());
+
+
+        $relatedIdColumn = $relatedSchema->getIdColumn()[0];
+        $relatedClass = $relatedSchema->getInstanceSettings()->getAppClass();
 
         $r = [];
 
