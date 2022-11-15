@@ -74,7 +74,7 @@ trait ColumnDateTimeTrait
 
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $raeValueToConvert,
-        ]);
+        ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
     }

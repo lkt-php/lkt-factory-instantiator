@@ -55,7 +55,7 @@ trait ColumnFloatTrait
     {
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
-        ]);
+        ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
     }

@@ -16,7 +16,6 @@ use Lkt\QueryBuilding\Where;
 use Lkt\QueryCaller\QueryCaller;
 use function Lkt\Tools\Arrays\arrayPushUnique;
 use function Lkt\Tools\Arrays\getArrayFirstPosition;
-use const Lkt\Factory\COLUMN_FOREIGN_KEY;
 
 trait ColumnPivotTrait
 {

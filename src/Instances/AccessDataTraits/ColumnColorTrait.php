@@ -88,7 +88,7 @@ trait ColumnColorTrait
         }
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $v,
-        ]);
+        ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
     }

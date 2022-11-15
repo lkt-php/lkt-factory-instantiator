@@ -2,7 +2,6 @@
 
 namespace Lkt\Factory\Instantiator\Instances;
 
-use Lkt\DatabaseConnectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
@@ -24,7 +23,6 @@ use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Schema;
-use Lkt\QueryCaller\QueryCaller;
 
 abstract class AbstractInstance
 {
@@ -97,7 +95,9 @@ abstract class AbstractInstance
         $code = Instantiator::getInstanceCode($component, $id);
 
         if (InstanceCache::inCache($code)) {
-            return InstanceCache::load($code);
+            $cached = InstanceCache::load($code);
+            $cached->hydrate([]);
+            return $cached;
         }
 
         if (count($initialData) > 0) {
@@ -166,6 +166,10 @@ abstract class AbstractInstance
      */
     public function hydrate(array $data)
     {
+        if (count($data) === 0) {
+            $this->UPDATED = [];
+            return;
+        }
         foreach ($data as $column => $datum){
             $this->UPDATED[$column] = $datum;
         }

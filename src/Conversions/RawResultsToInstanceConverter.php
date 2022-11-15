@@ -16,17 +16,20 @@ final class RawResultsToInstanceConverter
     protected $component;
     protected $data;
     protected $schema;
+    protected $allFields = true;
 
     /**
      * @param string $component
      * @param array $data
+     * @param bool $allFields
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    public function __construct(string $component, array $data)
+    public function __construct(string $component, array $data, bool $allFields = true)
     {
         $this->component = new ComponentValue($component);
         $this->schema = Schema::get($this->component->getValue());
+        $this->allFields = $allFields;
         $this->data = $data;
     }
 
@@ -49,8 +52,10 @@ final class RawResultsToInstanceConverter
     {
         $fields = $this->schema->getAllFields();
         $data = $this->data;
+        $allFields = $this->allFields;
+        $result = [];
 
-        return array_reduce($fields, function (&$result, AbstractField $field) use ($data) {
+        return array_reduce($fields, function (&$result, AbstractField $field) use ($data, $allFields) {
             $value = isset($data[$field->getName()]) ? $data[$field->getName()] : null;
             $key = $field->getName();
 
@@ -60,9 +65,11 @@ final class RawResultsToInstanceConverter
 
             $value = ParseFieldValue::parse($field, $value);
 
-            $result[$key] = $value;
+            if ($allFields || isset($data[$key])) {
+                $result[$key] = $value;
+            }
             return $result;
-        });
+        }, $result);
     }
 
     /**
@@ -74,15 +81,19 @@ final class RawResultsToInstanceConverter
     private function checkData(array $data = []): array
     {
         $fields = $this->schema->getAllFields();
+        $allFields = $this->allFields;
+        $result = [];
 
-        return array_reduce($fields, function (&$result, $field) use ($data) {
+        return array_reduce($fields, function (&$result, $field) use ($data, $allFields) {
 
-            $value = isset($data[$field->getName()]) ? $data[$field->getName()] : null;
+            $name = $field->getName();
+            $value = isset($data[$name]) ? $data[$name] : null;
             $status = ValidateFieldValue::validate($field, $value);
-            $key = trim('has' . ucfirst($field->getName()));
-            $result[$key] = $status;
+            $key = trim('has' . ucfirst($name));
+            if ($allFields || isset($data[$name])) {
+                $result[$key] = $status;
+            }
             return $result;
-        }
-        );
+        }, $result);
     }
 }
