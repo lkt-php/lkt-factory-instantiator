@@ -6,6 +6,8 @@ use chillerlan\Filereader\File;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\FileField;
+use Lkt\Factory\Schemas\Schema;
 
 trait ColumnFileTrait
 {
@@ -60,7 +62,25 @@ trait ColumnFileTrait
     protected function _getInternalPath(string $fieldName): string
     {
         $file = $this->_getFileVal($fieldName);
-        return $file->directory->path;
+        return trim($file->directory->path);
+    }
+
+    /**
+     * @param string $fieldName
+     * @return string
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getPublicPath(string $fieldName): string
+    {
+        $schema = Schema::get(static::GENERATED_TYPE);
+        /** @var FileField $field */
+        $field = $schema->getField($fieldName);
+
+        if ($field->hasPublicPath()) {
+            return $field->getPublicPath() . '/'.$this->_getFileName($fieldName);
+        }
+        return '';
     }
 
     /**
@@ -70,7 +90,7 @@ trait ColumnFileTrait
     protected function _getFileName(string $fieldName): string
     {
         $file = $this->_getFileVal($fieldName);
-        return $file->name;
+        return trim($file->name);
     }
 
     /**

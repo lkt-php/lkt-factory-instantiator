@@ -2,6 +2,7 @@
 
 namespace Lkt\Factory\Instantiator\Instances;
 
+use Lkt\DatabaseConnectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
@@ -22,7 +23,10 @@ use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\QueryCaller\QueryCaller;
+use function Lkt\Tools\Arrays\compareArrays;
 
 abstract class AbstractInstance
 {
@@ -173,5 +177,179 @@ abstract class AbstractInstance
         foreach ($data as $column => $datum){
             $this->UPDATED[$column] = $datum;
         }
+    }
+
+    public function save(): self
+    {
+//        $isValid = true;
+        $isUpdate = true;
+//        if($this->isAnonymous()){
+//            $validationClassName = FactorySettings::getComponentCreateValidationClassName(static::GENERATED_TYPE);
+//            if ($validationClassName) {
+//                $isValid = $validationClassName::getInstance($this);
+//            }
+//            $isUpdate = false;
+//        } else {
+//            $validationClassName = FactorySettings::getComponentUpdateValidationClassName(static::GENERATED_TYPE);
+//            if ($validationClassName) {
+//                $isValid = $validationClassName::getInstance($this);
+//            }
+//        }
+//
+//        if (!$isValid) {
+//            return -1;
+//        }
+
+        /**
+         * @var Schema $schema
+         * @var DatabaseConnector $connection
+         * @var QueryCaller $queryBuilder
+         */
+        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        $parsed = $connection->prepareDataToStore($schema, $this->UPDATED);
+
+        $queryBuilder->updateData($parsed);
+
+        $origIdColumn = $schema->getIdColumn();
+        $origIdColumn = $origIdColumn[0];
+
+        if ($isUpdate) {
+            $idColumn = $schema->getField($origIdColumn);
+            $idColumn = $idColumn->getColumn();
+            $queryBuilder->andIntegerEqual($idColumn, $this->DATA[$origIdColumn]);
+            $query = $connection->getUpdateQuery($queryBuilder);
+        } else {
+            $query = $connection->getInsertQuery($queryBuilder);
+        }
+
+        $queryResponse = $connection->query($query);
+
+        $id = (int)$connection->getLastInsertedId();
+        $reload = true;
+
+        if ($id > 0 && !$this->DATA[$origIdColumn]) {
+            $this->DATA[$origIdColumn] = $id;
+
+        } elseif($this->DATA[$origIdColumn] > 0) {
+            $id = $this->DATA[$origIdColumn];
+        }
+
+        if ($queryResponse !== false){
+            foreach ($this->UPDATED as $k => $v){
+                $this->DATA[$k] = $v;
+                unset($this->UPDATED[$k]);
+            }
+        }
+
+        if (count($this->PENDING_UPDATE_RELATED_DATA) > 0){
+            foreach ($this->PENDING_UPDATE_RELATED_DATA as $column => $data){
+
+                /** @var RelatedField $field */
+                $field = $schema->getField($column);
+                $relatedComponent = $field->getComponent();
+
+                $relatedSchema = Schema::get($field->getComponent());
+
+                $relatedIdColumn = $relatedSchema->getIdColumn()[0];
+                $relatedIdColumnGetter = 'get'.ucfirst($relatedIdColumn);
+                $relatedClass = $relatedSchema->getInstanceSettings()->getAppClass();
+
+                $create = $relatedSchema->getCreateHandler();
+                $update = $relatedSchema->getUpdateHandler();
+                $delete = $relatedSchema->getDeleteHandler();
+
+                // Check which items must be deleted
+                $currentItems = $this->_getRelatedVal($relatedComponent, $column, true);
+                $currentIds = [];
+                foreach ($currentItems as $currentItem){
+                    $idAux = (int)$currentItem->{$relatedIdColumnGetter}();
+                    if ($idAux > 0 && !in_array($idAux, $currentIds, true)){
+                        $currentIds[] = $idAux;
+                    }
+                }
+
+                $updatedIds = [];
+                foreach ($data as $datum){
+                    if ($datum[$relatedIdColumn] > 0){
+                        $updatedIds[] = (int)$datum[$relatedIdColumn];
+                    }
+                }
+
+                $diff = compareArrays($currentIds, $updatedIds);
+
+                // Delete
+                foreach ($diff['deleted'] as $deletedId) {
+                    $delete::getInstance($relatedClass::getInstance($deletedId));
+                }
+
+
+                // Update or create
+                foreach ($data as $datum){
+                    if ($datum[$relatedIdColumn] > 0){
+                        $instance = $relatedClass::getInstance($datum[$relatedIdColumn]);
+                        $update::getInstance($instance, $datum);
+
+                    } else {
+                        $create::getInstance($datum);
+                    }
+                }
+            }
+            $this->PENDING_UPDATE_RELATED_DATA = [];
+        }
+
+        if ($reload) {
+            $cacheCode = Instantiator::getInstanceCode($this->TYPE, $id);
+            InstanceCache::clearCode($cacheCode);
+            return Instantiator::make($this->TYPE, $id);
+
+//            $cacheCode = "{$this->TYPE}_{$id}";
+//            InstanceFactory::getInstance($this->TYPE, $id)->query();
+//
+//
+//            $class = FactorySettings::getComponentClassName($this->TYPE);
+//            if($class === get_class($this)){
+//                InstanceGenerator::store($cacheCode, $this);
+//            }
+//
+//            if (InstanceCache::inCache($cacheCode)) {
+//                $data = InstanceCache::load($cacheCode);
+//                foreach ($data as $key => $datum) {
+//                    $this->DATA[$key] = $datum;
+//                }
+//            }
+//
+//            $this->RELATED_DATA = [];
+        }
+
+        return $this;
+    }
+
+    public function delete()
+    {
+        if ($this->isAnonymous()){
+            return 1;
+        }
+
+        /**
+         * @var Schema $schema
+         * @var DatabaseConnector $connection
+         * @var QueryCaller $queryBuilder
+         */
+        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+
+        $origIdColumn = $schema->getIdColumn();
+        $origIdColumn = $origIdColumn[0];
+        $idColumn = $schema->getField($origIdColumn);
+        $idColumn = $idColumn->getColumn();
+        $id = (int)$this->DATA[$origIdColumn];
+        $queryBuilder->andIntegerEqual($idColumn, $id);
+        $query = $connection->getDeleteQuery($queryBuilder);
+
+        $queryResponse = $connection->query($query);
+        if ($queryResponse === true) {
+            $cacheCode = Instantiator::getInstanceCode($this->TYPE, $id);
+            InstanceCache::clearCode($cacheCode);
+        }
+        return null;
     }
 }
