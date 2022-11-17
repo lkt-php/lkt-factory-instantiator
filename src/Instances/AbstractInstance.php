@@ -2,6 +2,7 @@
 
 namespace Lkt\Factory\Instantiator\Instances;
 
+use Exception;
 use Lkt\DatabaseConnectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
@@ -349,6 +350,49 @@ abstract class AbstractInstance
         if ($queryResponse === true) {
             $cacheCode = Instantiator::getInstanceCode($this->TYPE, $id);
             InstanceCache::clearCode($cacheCode);
+        }
+        return null;
+    }
+
+    /**
+     * @return QueryCaller
+     * @throws SchemaNotDefinedException
+     */
+    public static function getQueryCaller(): QueryCaller
+    {
+        /**
+         * @var QueryCaller $caller
+         */
+        list($caller) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        return $caller;
+    }
+
+    /**
+     * @param QueryCaller $queryCaller
+     * @return array
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
+     * @throws Exception
+     */
+    public static function getMany(QueryCaller $queryCaller): array
+    {
+        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
+    }
+
+    /**
+     * @param QueryCaller $queryCaller
+     * @return AbstractInstance|null
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
+     */
+    public static function getOne(QueryCaller $queryCaller): ?AbstractInstance
+    {
+        $queryCaller->pagination(1, 1);
+        $r = Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
+        if (count($r) > 0) {
+            return $r[0];
         }
         return null;
     }
