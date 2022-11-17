@@ -9,6 +9,7 @@ use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Where;
+use Lkt\QueryCaller\QueryCaller;
 
 trait ColumnRelatedTrait
 {
@@ -51,10 +52,57 @@ trait ColumnRelatedTrait
     }
 
     /**
+     * @param string $type
+     * @param $column
+     * @param $forceRefresh
+     * @return array
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getRelatedValSingle(string $type = '', $column = '', $forceRefresh = false)
+    {
+        if (!$forceRefresh && isset($this->UPDATED_RELATED_DATA[$column])) {
+            return $this->UPDATED_RELATED_DATA[$column];
+        }
+
+        if (!$forceRefresh && isset($this->RELATED_DATA[$column])) {
+            return $this->RELATED_DATA[$column];
+        }
+
+        $schema = Schema::get(static::GENERATED_TYPE);
+        /** @var RelatedField $field */
+        $field = $schema->getField($column);
+
+        $idColumn = $schema->getIdString();
+        if (!$this->DATA[$idColumn]) {
+            return [];
+        }
+
+        $caller = $this->_getRelatedInstanceFactory($type, $column, $forceRefresh);
+
+        $data = $caller->select();
+        $relatedSchema = Schema::get($field->getComponent());
+
+        $results = Instantiator::makeResults($relatedSchema->getComponent(), $data);
+
+        $this->RELATED_DATA[$column] = $results[0];
+        return $this->RELATED_DATA[$column];
+    }
+
+    /**
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
     protected function _getRelatedInstanceFactory($type = '', $column = '', $forceRefresh = false)
+    {
+        return $this->_getRelatedQueryCaller($type, $column, $forceRefresh);
+    }
+
+    /**
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getRelatedQueryCaller($type = '', $column = '', $forceRefresh = false)
     {
         if (!$type) {
             return null;
@@ -67,10 +115,10 @@ trait ColumnRelatedTrait
         $field = $schema->getField($column);
 
         $where = $field->getWhere();
-        if (!is_array($where)){
-            $where = [];
-        }
 
+        /**
+         * @var QueryCaller $caller
+         */
         list($caller, $connection) = Instantiator::getQueryCaller($field->getComponent());
 
         if ($this->DATA[$idColumn]) {
@@ -82,13 +130,15 @@ trait ColumnRelatedTrait
             $order = [];
         }
 
-        $caller->where(Where::raw(implode(' AND ', $where)));
+        $caller->andRaw(implode(' AND ', $where));
         $caller->orderBy(implode(',', $order));
         $caller->setForceRefresh($forceRefresh);
 
+        if ($field->isSingleMode()) {
+            $caller->pagination(1, 1);
+        }
+
         return $caller;
-
-
     }
 
     /**

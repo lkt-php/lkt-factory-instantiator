@@ -58,6 +58,19 @@ trait ColumnRelatedKeysTrait
      */
     protected function _getRelatedKeysInstanceFactory($type = '', $column = '', $forceRefresh = false)
     {
+        return$this->_getRelatedKeysQueryCaller($type, $column, $forceRefresh);
+    }
+
+    /**
+     * @param $type
+     * @param $column
+     * @param $forceRefresh
+     * @return Query|QueryCaller|null
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getRelatedKeysQueryCaller($type = '', $column = '', $forceRefresh = false)
+    {
         if (!$type) {
             return null;
         }
