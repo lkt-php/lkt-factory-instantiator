@@ -387,7 +387,7 @@ abstract class AbstractInstance
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    public static function getOne(QueryCaller $queryCaller): ?AbstractInstance
+    public static function getOne(QueryCaller $queryCaller)
     {
         $queryCaller->pagination(1, 1);
         $r = Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
