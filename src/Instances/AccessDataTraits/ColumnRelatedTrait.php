@@ -2,6 +2,7 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
+use Lkt\DatabaseConnectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
@@ -10,6 +11,7 @@ use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Where;
 use Lkt\QueryCaller\QueryCaller;
+use function Lkt\Tools\Arrays\implodeWithOR;
 
 trait ColumnRelatedTrait
 {
@@ -118,13 +120,23 @@ trait ColumnRelatedTrait
 
         /**
          * @var QueryCaller $caller
+         * @var DatabaseConnector $connection
          */
         list($caller, $connection) = Instantiator::getQueryCaller($field->getComponent());
 
-        if ($this->DATA[$idColumn]) {
-            $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
-        }
+        if ($field->hasMultipleReferences()){
+            $temp = [];
+            foreach ($field->getMultipleReferences() as $reference)  {
+                $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
+            }
 
+            $where[] = '(' . implodeWithOR($temp) . ')';
+
+        } else {
+            if ($this->DATA[$idColumn]) {
+                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
+            }
+        }
         $order = $field->getOrder();
         if (!is_array($order)){
             $order = [];

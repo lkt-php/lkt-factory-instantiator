@@ -56,17 +56,23 @@ final class RawResultsToInstanceConverter
         $result = [];
 
         return array_reduce($fields, function (&$result, AbstractField $field) use ($data, $allFields) {
-            $value = isset($data[$field->getName()]) ? $data[$field->getName()] : null;
-            $key = $field->getName();
+            $searchKey = $field->getName();
+            $storeKey = $field->getName();
 
             if ($field instanceof ForeignKeyField) {
-                $key .= 'Id';
+                $storeKey .= 'Id';
+
+                // Fix: parse foreign key integer datum while updating data
+                if (!isset($data[$searchKey]) && isset($data[$storeKey])) {
+                    $searchKey = $storeKey;
+                }
             }
 
+            $value = isset($data[$searchKey]) ? $data[$searchKey] : null;
             $value = ParseFieldValue::parse($field, $value);
 
-            if ($allFields || isset($data[$key])) {
-                $result[$key] = $value;
+            if ($allFields || isset($data[$searchKey])) {
+                $result[$storeKey] = $value;
             }
             return $result;
         }, $result);

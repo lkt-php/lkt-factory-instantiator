@@ -89,7 +89,7 @@ abstract class AbstractInstance
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): self
+    public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = [])
     {
         if (!$component) {
             $component = static::GENERATED_TYPE;
