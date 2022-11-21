@@ -3,6 +3,7 @@
 namespace Lkt\Factory\Instantiator\Instances;
 
 use Exception;
+use Lkt\DatabaseConnectors\Cache\QueryCache;
 use Lkt\DatabaseConnectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
@@ -138,7 +139,7 @@ abstract class AbstractInstance
     /**
      * @return bool
      */
-    public function isAnonymous() :bool
+    public function isAnonymous(): bool
     {
         return count($this->DATA) === 0;
     }
@@ -175,7 +176,7 @@ abstract class AbstractInstance
             $this->UPDATED = [];
             return;
         }
-        foreach ($data as $column => $datum){
+        foreach ($data as $column => $datum) {
             $this->UPDATED[$column] = $datum;
         }
     }
@@ -231,19 +232,19 @@ abstract class AbstractInstance
         if ($id > 0 && !$this->DATA[$origIdColumn]) {
             $this->DATA[$origIdColumn] = $id;
 
-        } elseif($this->DATA[$origIdColumn] > 0) {
+        } elseif ($this->DATA[$origIdColumn] > 0) {
             $id = $this->DATA[$origIdColumn];
         }
 
-        if ($queryResponse !== false){
-            foreach ($this->UPDATED as $k => $v){
+        if ($queryResponse !== false) {
+            foreach ($this->UPDATED as $k => $v) {
                 $this->DATA[$k] = $v;
                 unset($this->UPDATED[$k]);
             }
         }
 
-        if (count($this->PENDING_UPDATE_RELATED_DATA) > 0){
-            foreach ($this->PENDING_UPDATE_RELATED_DATA as $column => $data){
+        if (count($this->PENDING_UPDATE_RELATED_DATA) > 0) {
+            foreach ($this->PENDING_UPDATE_RELATED_DATA as $column => $data) {
 
                 /** @var RelatedField $field */
                 $field = $schema->getField($column);
@@ -252,7 +253,7 @@ abstract class AbstractInstance
                 $relatedSchema = Schema::get($field->getComponent());
 
                 $relatedIdColumn = $relatedSchema->getIdColumn()[0];
-                $relatedIdColumnGetter = 'get'.ucfirst($relatedIdColumn);
+                $relatedIdColumnGetter = 'get' . ucfirst($relatedIdColumn);
                 $relatedClass = $relatedSchema->getInstanceSettings()->getAppClass();
 
                 $create = $relatedSchema->getCreateHandler();
@@ -262,16 +263,16 @@ abstract class AbstractInstance
                 // Check which items must be deleted
                 $currentItems = $this->_getRelatedVal($relatedComponent, $column, true);
                 $currentIds = [];
-                foreach ($currentItems as $currentItem){
+                foreach ($currentItems as $currentItem) {
                     $idAux = (int)$currentItem->{$relatedIdColumnGetter}();
-                    if ($idAux > 0 && !in_array($idAux, $currentIds, true)){
+                    if ($idAux > 0 && !in_array($idAux, $currentIds, true)) {
                         $currentIds[] = $idAux;
                     }
                 }
 
                 $updatedIds = [];
-                foreach ($data as $datum){
-                    if ($datum[$relatedIdColumn] > 0){
+                foreach ($data as $datum) {
+                    if ($datum[$relatedIdColumn] > 0) {
                         $updatedIds[] = (int)$datum[$relatedIdColumn];
                     }
                 }
@@ -285,8 +286,8 @@ abstract class AbstractInstance
 
 
                 // Update or create
-                foreach ($data as $datum){
-                    if ($datum[$relatedIdColumn] > 0){
+                foreach ($data as $datum) {
+                    if ($datum[$relatedIdColumn] > 0) {
                         $instance = $relatedClass::getInstance($datum[$relatedIdColumn]);
                         $update::getInstance($instance, $datum);
 
@@ -299,9 +300,9 @@ abstract class AbstractInstance
         }
 
         if ($reload) {
-            $cacheCode = Instantiator::getInstanceCode($this->TYPE, $id);
+            $cacheCode = Instantiator::getInstanceCode(static::GENERATED_TYPE, $id);
             InstanceCache::clearCode($cacheCode);
-            return Instantiator::make($this->TYPE, $id);
+            return Instantiator::make(static::GENERATED_TYPE, $id);
         }
 
         return $this;
@@ -309,8 +310,8 @@ abstract class AbstractInstance
 
     public function delete()
     {
-        if ($this->isAnonymous()){
-            return 1;
+        if ($this->isAnonymous()) {
+            return $this;
         }
 
         /**
@@ -318,7 +319,7 @@ abstract class AbstractInstance
          * @var DatabaseConnector $connection
          * @var QueryCaller $caller
          */
-        list($caller, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
 
         $origIdColumn = $schema->getIdColumn();
         $origIdColumn = $origIdColumn[0];
@@ -326,14 +327,20 @@ abstract class AbstractInstance
         $idColumn = $idColumn->getColumn();
         $id = (int)$this->DATA[$origIdColumn];
         $caller->andIntegerEqual($idColumn, $id);
-        $query = $connection->getDeleteQuery($caller);
 
-        $queryResponse = $connection->query($query);
-        if ($queryResponse === true) {
-            $cacheCode = Instantiator::getInstanceCode($this->TYPE, $id);
-            InstanceCache::clearCode($cacheCode);
-        }
-        return null;
+        $connection->query($connection->getDeleteQuery($caller));
+        $cacheCode = Instantiator::getInstanceCode(static::GENERATED_TYPE, $id);
+        InstanceCache::clearCode($cacheCode);
+        $query = $connection->getSelectQuery($caller);
+        QueryCache::set($connector, $query, []);
+        $this->setData([]);
+        $this->hydrate([]);
+        $this->RELATED_DATA = [];
+        $this->PIVOT = [];
+        $this->PIVOT_DATA = [];
+        $this->UPDATED_RELATED_DATA = [];
+        $this->PENDING_UPDATE_RELATED_DATA = [];
+        return $this;
     }
 
     /**
