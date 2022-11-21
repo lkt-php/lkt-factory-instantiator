@@ -5,6 +5,7 @@ namespace Lkt\Factory\Instantiator\Instances;
 use Exception;
 use Lkt\DatabaseConnectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
+use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
@@ -27,6 +28,7 @@ use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
+use SebastianBergmann\Timer\RuntimeException;
 use function Lkt\Tools\Arrays\compareArrays;
 
 abstract class AbstractInstance
@@ -166,9 +168,7 @@ abstract class AbstractInstance
         return Instantiator::make($component, $this->getIdColumnValue());
     }
 
-    /**
-     * @param array $data
-     */
+
     public function hydrate(array $data)
     {
         if (count($data) === 0) {
@@ -183,7 +183,7 @@ abstract class AbstractInstance
     public function save(): self
     {
 //        $isValid = true;
-        $isUpdate = true;
+        $isUpdate = !$this->isAnonymous();
 //        if($this->isAnonymous()){
 //            $validationClassName = FactorySettings::getComponentCreateValidationClassName(static::GENERATED_TYPE);
 //            if ($validationClassName) {
@@ -302,24 +302,6 @@ abstract class AbstractInstance
             $cacheCode = Instantiator::getInstanceCode($this->TYPE, $id);
             InstanceCache::clearCode($cacheCode);
             return Instantiator::make($this->TYPE, $id);
-
-//            $cacheCode = "{$this->TYPE}_{$id}";
-//            InstanceFactory::getInstance($this->TYPE, $id)->query();
-//
-//
-//            $class = FactorySettings::getComponentClassName($this->TYPE);
-//            if($class === get_class($this)){
-//                InstanceGenerator::store($cacheCode, $this);
-//            }
-//
-//            if (InstanceCache::inCache($cacheCode)) {
-//                $data = InstanceCache::load($cacheCode);
-//                foreach ($data as $key => $datum) {
-//                    $this->DATA[$key] = $datum;
-//                }
-//            }
-//
-//            $this->RELATED_DATA = [];
         }
 
         return $this;
@@ -334,17 +316,17 @@ abstract class AbstractInstance
         /**
          * @var Schema $schema
          * @var DatabaseConnector $connection
-         * @var QueryCaller $queryBuilder
+         * @var QueryCaller $caller
          */
-        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        list($caller, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
 
         $origIdColumn = $schema->getIdColumn();
         $origIdColumn = $origIdColumn[0];
         $idColumn = $schema->getField($origIdColumn);
         $idColumn = $idColumn->getColumn();
         $id = (int)$this->DATA[$origIdColumn];
-        $queryBuilder->andIntegerEqual($idColumn, $id);
-        $query = $connection->getDeleteQuery($queryBuilder);
+        $caller->andIntegerEqual($idColumn, $id);
+        $query = $connection->getDeleteQuery($caller);
 
         $queryResponse = $connection->query($query);
         if ($queryResponse === true) {
@@ -395,5 +377,15 @@ abstract class AbstractInstance
             return $r[0];
         }
         return null;
+    }
+
+    public function getComponent(): string
+    {
+        return static::GENERATED_TYPE;
+    }
+
+    public function toArray(): array
+    {
+        return InstanceToArray::convert($this);
     }
 }
