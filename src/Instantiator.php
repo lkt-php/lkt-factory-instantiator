@@ -96,7 +96,14 @@ class Instantiator
     public static function getQueryCaller(string $component): array
     {
         $schema = Schema::get($component);
-        $caller = QueryCaller::table($schema->getTable());
+//        if ($schema->getInstanceSettings()->getQueryCallerClassName() !== '') {
+//            $fqdn = $schema->getInstanceSettings()->getQueryCallerFQDN();
+//            $caller = call_user_func_array([$fqdn, 'getCaller'], []);
+//            dd($caller);
+//
+//        } else {
+            $caller = QueryCaller::table($schema->getTable());
+//        }
 
         $connector = $schema->getDatabaseConnector();
         if ($connector === '') {
@@ -106,5 +113,37 @@ class Instantiator
         $caller->setColumns($connection->extractSchemaColumns($schema));
 
         return [$caller, $connection, $schema, $connector];
+    }
+
+    public static function getCustomQueryCaller(string $component)
+    {
+        $schema = Schema::get($component);
+        if ($schema->getInstanceSettings()->getQueryCallerClassName() !== '') {
+            $fqdn = $schema->getInstanceSettings()->getQueryCallerFQDN();
+            $caller = call_user_func_array([$fqdn, 'getCaller'], []);
+
+        } else {
+            $caller = QueryCaller::table($schema->getTable());
+        }
+
+        $connector = $schema->getDatabaseConnector();
+        if ($connector === '') {
+            $connector = DatabaseConnections::$defaultConnector;
+        }
+        $connection = DatabaseConnections::get($connector);
+        $caller->setColumns($connection->extractSchemaColumns($schema));
+
+        return [$caller, $connection, $schema, $connector];
+    }
+
+    public static function prepareQueryCaller(string $component, QueryCaller &$caller): void
+    {
+        $schema = Schema::get($component);
+        $connector = $schema->getDatabaseConnector();
+        if ($connector === '') {
+            $connector = DatabaseConnections::$defaultConnector;
+        }
+        $connection = DatabaseConnections::get($connector);
+        $caller->setColumns($connection->extractSchemaColumns($schema));
     }
 }

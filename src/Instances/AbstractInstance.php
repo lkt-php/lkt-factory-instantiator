@@ -347,7 +347,7 @@ abstract class AbstractInstance
      * @return QueryCaller
      * @throws SchemaNotDefinedException
      */
-    public static function getQueryCaller(): QueryCaller
+    public static function getQueryCaller()
     {
         /**
          * @var QueryCaller $caller

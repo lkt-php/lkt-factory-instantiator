@@ -154,6 +154,59 @@ trait ColumnRelatedTrait
     }
 
     /**
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getRelatedCustomQueryCaller($type = '', $column = '', $forceRefresh = false)
+    {
+        if (!$type) {
+            return null;
+        }
+
+        $schema = Schema::get(static::GENERATED_TYPE);
+
+        $idColumn = $schema->getIdString();
+        /** @var RelatedField $field */
+        $field = $schema->getField($column);
+
+        $where = $field->getWhere();
+
+        /**
+         * @var QueryCaller $caller
+         * @var DatabaseConnector $connection
+         */
+        list($caller, $connection) = Instantiator::getCustomQueryCaller($field->getComponent());
+
+        if ($field->hasMultipleReferences()){
+            $temp = [];
+            foreach ($field->getMultipleReferences() as $reference)  {
+                $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
+            }
+
+            $where[] = '(' . implodeWithOR($temp) . ')';
+
+        } else {
+            if ($this->DATA[$idColumn]) {
+                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
+            }
+        }
+        $order = $field->getOrder();
+        if (!is_array($order)){
+            $order = [];
+        }
+
+        $caller->andRaw(implode(' AND ', $where));
+        $caller->orderBy(implode(',', $order));
+        $caller->setForceRefresh($forceRefresh);
+
+        if ($field->isSingleMode()) {
+            $caller->pagination(1, 1);
+        }
+
+        return $caller;
+    }
+
+    /**
      * @param string $type
      * @param string $column
      * @return bool
