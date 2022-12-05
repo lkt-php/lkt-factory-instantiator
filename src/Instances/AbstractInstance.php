@@ -58,6 +58,8 @@ abstract class AbstractInstance
     protected $RELATED_DATA = [];
     protected $UPDATED_RELATED_DATA = [];
     protected $PENDING_UPDATE_RELATED_DATA = [];
+    protected $PAGES = [];
+    protected $PAGES_TOTAL = [];
     const GENERATED_TYPE = '';
 
     /**
@@ -394,5 +396,17 @@ abstract class AbstractInstance
     public function toArray(): array
     {
         return InstanceToArray::convert($this);
+    }
+
+    protected function hasPageLoaded(string $fieldName, int $page): bool
+    {
+        return isset($this->PAGES[$fieldName])
+            && isset($this->PAGES[$fieldName][$page])
+            && is_array($this->PAGES[$fieldName][$page]);
+    }
+
+    protected function hasPageTotal(string $fieldName): bool
+    {
+        return isset($this->PAGES_TOTAL[$fieldName]);
     }
 }
