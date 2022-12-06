@@ -31,6 +31,7 @@ use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
 use SebastianBergmann\Timer\RuntimeException;
 use function Lkt\Tools\Arrays\compareArrays;
+use function Lkt\Tools\Pagination\getTotalPages;
 
 abstract class AbstractInstance
 {
@@ -366,8 +367,11 @@ abstract class AbstractInstance
      * @throws SchemaNotDefinedException
      * @throws Exception
      */
-    public static function getMany(QueryCaller $queryCaller): array
+    public static function getMany(QueryCaller $queryCaller = null): array
     {
+        if (!$queryCaller) {
+            $queryCaller = static::getQueryCaller();
+        }
         return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
     }
 
@@ -378,14 +382,85 @@ abstract class AbstractInstance
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    public static function getOne(QueryCaller $queryCaller)
+    public static function getOne(QueryCaller $queryCaller = null)
     {
+        if (!$queryCaller) {
+            $queryCaller = static::getQueryCaller();
+        }
         $queryCaller->pagination(1, 1);
         $r = Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
         if (count($r) > 0) {
             return $r[0];
         }
         return null;
+    }
+
+    /**
+     * @param QueryCaller $queryCaller
+     * @param string|null $countableField
+     * @return int
+     * @throws SchemaNotDefinedException
+     */
+    public static function getCount(QueryCaller $queryCaller = null, string $countableField = null): int
+    {
+        if (!$queryCaller) {
+            $queryCaller = static::getQueryCaller();
+        }
+
+        if (!$countableField) {
+            $schema = Schema::get(static::GENERATED_TYPE);
+            $countableField = $schema->getCountableField();
+        }
+
+        if (!$countableField) {
+            return 0;
+        }
+
+        return $queryCaller->count($countableField);
+    }
+
+    /**
+     * @param QueryCaller $queryCaller
+     * @param string|null $countableField
+     * @return int
+     * @throws SchemaNotDefinedException
+     */
+    public static function getAmountOfPages(QueryCaller $queryCaller = null, string $countableField = null): int
+    {
+        $total = static::getCount($queryCaller, $countableField);
+        if ($total === 0) {
+            return 0;
+        }
+        $schema = Schema::get(static::GENERATED_TYPE);
+        $itemsPerPage = $schema->getItemsPerPage();
+        if ($itemsPerPage <= 0) {
+            return 0;
+        }
+
+        return getTotalPages($total, $itemsPerPage);
+    }
+
+    /**
+     * @param int $page
+     * @param QueryCaller|null $queryCaller
+     * @return array
+     * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
+     */
+    public static function getPage(int $page, QueryCaller $queryCaller = null): array
+    {
+        if (!$queryCaller) {
+            $queryCaller = static::getQueryCaller();
+        }
+        $schema = Schema::get(static::GENERATED_TYPE);
+        $limit = $schema->getItemsPerPage();
+
+        if ($limit >= 0) {
+            $queryCaller->pagination($page, $limit);
+        }
+
+        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
     }
 
     public function getComponent(): string
