@@ -84,8 +84,6 @@ class ParseColumn
             return null;
         }
         try {
-//            $date = new \DateTime($str);
-//            unset($date);
             return new Carbon($str);
 
         } catch (\Exception $e) {

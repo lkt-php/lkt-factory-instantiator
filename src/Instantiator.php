@@ -90,20 +90,13 @@ class Instantiator
 
     /**
      * @param string $component
-     * @return array[$caller, $connection, $schema]
+     * @return array[$caller, $connection, $schema, $connector]
      * @throws SchemaNotDefinedException
      */
     public static function getQueryCaller(string $component): array
     {
         $schema = Schema::get($component);
-//        if ($schema->getInstanceSettings()->getQueryCallerClassName() !== '') {
-//            $fqdn = $schema->getInstanceSettings()->getQueryCallerFQDN();
-//            $caller = call_user_func_array([$fqdn, 'getCaller'], []);
-//            dd($caller);
-//
-//        } else {
-            $caller = QueryCaller::table($schema->getTable());
-//        }
+        $caller = QueryCaller::table($schema->getTable());
 
         $connector = $schema->getDatabaseConnector();
         if ($connector === '') {

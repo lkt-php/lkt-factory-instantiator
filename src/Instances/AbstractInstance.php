@@ -16,11 +16,13 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnFileTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnFloatTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnForeignListTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnForeignTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnIntegerChoiceTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnIntegerTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnJsonTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnPivotTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringChoiceTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
@@ -29,7 +31,6 @@ use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
-use SebastianBergmann\Timer\RuntimeException;
 use function Lkt\Tools\Arrays\compareArrays;
 use function Lkt\Tools\Pagination\getTotalPages;
 
@@ -48,7 +49,9 @@ abstract class AbstractInstance
         ColumnRelatedTrait,
         ColumnRelatedKeysTrait,
         ColumnPivotTrait,
-        ColumnDateTimeTrait;
+        ColumnDateTimeTrait,
+        ColumnStringChoiceTrait,
+        ColumnIntegerChoiceTrait;
 
     protected $TYPE;
     protected $DATA = [];
