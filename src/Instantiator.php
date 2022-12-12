@@ -6,6 +6,7 @@ use Lkt\DatabaseConnectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instances\AbstractInstance;
+use Lkt\Factory\Instantiator\Process\ProcessQueryCallerData;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Schema;
@@ -108,7 +109,7 @@ class Instantiator
         return [$caller, $connection, $schema, $connector];
     }
 
-    public static function getCustomQueryCaller(string $component)
+    public static function getCustomQueryCaller(string $component, array $data = null, array $processRules = null, array $filterRules = null): array
     {
         $schema = Schema::get($component);
         if ($schema->getInstanceSettings()->getQueryCallerClassName() !== '') {
@@ -118,6 +119,8 @@ class Instantiator
         } else {
             $caller = QueryCaller::table($schema->getTable());
         }
+
+        static::filterQueryCaller($component, $caller, $data, $processRules, $filterRules);
 
         $connector = $schema->getDatabaseConnector();
         if ($connector === '') {
@@ -138,5 +141,11 @@ class Instantiator
         }
         $connection = DatabaseConnections::get($connector);
         $caller->setColumns($connection->extractSchemaColumns($schema));
+    }
+
+    public static function filterQueryCaller(string $component, QueryCaller &$caller, array $data = null, array $processRules = null, array $filterRules = null)
+    {
+        $processor = new ProcessQueryCallerData($component, $caller, $data, $processRules, $filterRules);
+        $processor->process();
     }
 }
