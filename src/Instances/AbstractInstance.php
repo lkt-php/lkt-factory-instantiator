@@ -120,7 +120,11 @@ abstract class AbstractInstance
             InstanceCache::store($code, $r);
             return InstanceCache::load($code);
         }
-
+        /**
+         * @var Schema $schema
+         * @var DatabaseConnector $connection
+         * @var QueryCaller $queryBuilder
+         */
         list($caller, $connection, $schema) = Instantiator::getQueryCaller($component);
         $identifiers = $schema->getIdentifiers();
 
@@ -128,7 +132,7 @@ abstract class AbstractInstance
             $caller->andIntegerEqual($identifier->getColumn(), $id);
         }
 
-        $data = $caller->select();
+        $data = $caller->selectDistinct();
         if (count($data) > 0) {
             $converter = new RawResultsToInstanceConverter($component, $data[0]);
             $itemData = $converter->parse();
@@ -375,7 +379,7 @@ abstract class AbstractInstance
         if (!$queryCaller) {
             $queryCaller = static::getQueryCaller();
         }
-        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
+        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
     }
 
     /**
@@ -391,7 +395,7 @@ abstract class AbstractInstance
             $queryCaller = static::getQueryCaller();
         }
         $queryCaller->pagination(1, 1);
-        $r = Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
+        $r = Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
         if (count($r) > 0) {
             return $r[0];
         }
@@ -463,7 +467,7 @@ abstract class AbstractInstance
             $queryCaller->pagination($page, $limit);
         }
 
-        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->select());
+        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
     }
 
     public function getComponent(): string
