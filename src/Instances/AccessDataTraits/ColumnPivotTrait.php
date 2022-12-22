@@ -11,6 +11,8 @@ use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\PivotField;
+use Lkt\Factory\Schemas\Fields\PivotLeftIdField;
+use Lkt\Factory\Schemas\Fields\PivotRightIdField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Where;
 use Lkt\QueryCaller\QueryCaller;
@@ -120,6 +122,7 @@ trait ColumnPivotTrait
             return [];
         }
 
+        /** @var ForeignKeyField[] $pivotIdentifiers */
         $pivotIdentifiers = $pivotSchema->getIdentifiers();
         $pivotForeignColumn = null;
         foreach ($pivotIdentifiers as $identifier) {
@@ -129,7 +132,7 @@ trait ColumnPivotTrait
             }
         }
 
-        /** @var Schema $toSchema */
+        /** @var PivotRightIdField|PivotLeftIdField $pivotForeignColumn */
         $toSchema = Schema::get($pivotForeignColumn->getComponent());
 
         $toIdentifiers = $toSchema->getIdentifiers();
@@ -151,11 +154,14 @@ trait ColumnPivotTrait
 
         $order = trim(implode(', ', $order));
 
-        list($caller, $connection) = Instantiator::getQueryCaller($toSchema->getComponent());
+        /**
+         * @var QueryCaller $caller
+         */
+        list($caller) = Instantiator::getQueryCaller($toSchema->getComponent());
 
+//        $caller->andIntegerIn($toColumnString, $ids);
         $caller->where(Where::raw($where));
         $caller->orderBy($order);
-
         $results = Instantiator::makeResults($toSchema->getComponent(), $caller->select());
 
         $this->PIVOT_DATA[$column] = $results;

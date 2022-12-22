@@ -2,10 +2,7 @@
 
 namespace Lkt\Factory\Instantiator\Process;
 
-use Lkt\Factory\Instantiator\Validations\ParseFieldValue;
-use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
-use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\IntegerChoiceField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
@@ -41,6 +38,10 @@ final class ProcessQueryCallerData
 
         if (!is_array($this->filterRules)) {
             $this->filterRules = [];
+        }
+
+        if (!is_array($this->data)) {
+            $this->data = [];
         }
     }
 
