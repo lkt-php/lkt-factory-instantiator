@@ -2,21 +2,20 @@
   "name": "lkt/factory-instantiator",
   "description": "LKT Factory Instantiator",
   "type": "library",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "require": {
     "php": ">=8.1.0",
     "ext-intl": "*",
     "ext-json": "*",
     "nesbot/carbon": "^2.62",
-    "lkt/column-types": "^1.0",
-    "lkt/value-objects": "^1.0",
-    "lkt/tools": "^1.2",
-    "lkt/factory-schemas": "^1.0",
-    "lkt/query-caller": "^1.0",
+    "lkt/value-objects": "^2.0",
+    "lkt/tools": "^2.0",
+    "lkt/factory-schemas": "^2.0",
+    "lkt/query-caller": "^2.0",
     "lkt/file-reader": "^1.0"
   },
   "require-dev": {
-    "lkt/mysql-connector": "^1.0",
+    "lkt/mysql-connector": "^2.0",
     "phpunit/phpunit": "^9.5",
     "symfony/var-dumper": "^6.2"
   },
