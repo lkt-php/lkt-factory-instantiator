@@ -21,6 +21,7 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnIntegerTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnJsonTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnPivotTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysMergeTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringChoiceTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
@@ -51,7 +52,8 @@ abstract class AbstractInstance
         ColumnPivotTrait,
         ColumnDateTimeTrait,
         ColumnStringChoiceTrait,
-        ColumnIntegerChoiceTrait;
+        ColumnIntegerChoiceTrait,
+        ColumnRelatedKeysMergeTrait;
 
     protected $TYPE;
     protected $DATA = [];

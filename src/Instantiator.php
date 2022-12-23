@@ -10,6 +10,7 @@ use Lkt\Factory\Instantiator\Process\ProcessQueryCallerData;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\QueryBuilding\Where;
 use Lkt\QueryCaller\QueryCaller;
 
 class Instantiator
@@ -130,6 +131,20 @@ class Instantiator
         $caller->setColumns($connection->extractSchemaColumns($schema));
 
         return [$caller, $connection, $schema, $connector];
+    }
+
+    public static function getCustomWhere(string $component): Where
+    {
+        $schema = Schema::get($component);
+        if ($schema->getInstanceSettings()->getWhereClassName() !== '') {
+            $fqdn = $schema->getInstanceSettings()->getWhereFQDN();
+            $where = call_user_func_array([$fqdn, 'getEmpty'], []);
+
+        } else {
+            $where = Where::getEmpty();
+        }
+        $where->setTable($schema->getTable());
+        return $where;
     }
 
     public static function prepareQueryCaller(string $component, QueryCaller &$caller): void
