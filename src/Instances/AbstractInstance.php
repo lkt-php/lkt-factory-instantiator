@@ -20,8 +20,8 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnIntegerChoiceTrait
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnIntegerTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnJsonTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnPivotTrait;
-use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysMergeTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringChoiceTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
@@ -29,11 +29,23 @@ use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\ColorField;
+use Lkt\Factory\Schemas\Fields\DateTimeField;
+use Lkt\Factory\Schemas\Fields\EmailField;
+use Lkt\Factory\Schemas\Fields\FloatField;
+use Lkt\Factory\Schemas\Fields\HTMLField;
+use Lkt\Factory\Schemas\Fields\IdField;
+use Lkt\Factory\Schemas\Fields\IntegerChoiceField;
+use Lkt\Factory\Schemas\Fields\IntegerField;
+use Lkt\Factory\Schemas\Fields\JSONField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
+use Lkt\Factory\Schemas\Fields\StringChoiceField;
+use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryCaller\QueryCaller;
 use function Lkt\Tools\Arrays\compareArrays;
 use function Lkt\Tools\Pagination\getTotalPages;
+use function Lkt\Tools\Parse\clearInput;
 
 abstract class AbstractInstance
 {
@@ -241,7 +253,7 @@ abstract class AbstractInstance
         $id = (int)$connection->getLastInsertedId();
         $reload = true;
 
-        if ($id > 0 && !$this->DATA[$origIdColumn]) {
+        if ($id > 0 && (!isset($this->DATA[$origIdColumn]) || !$this->DATA[$origIdColumn])) {
             $this->DATA[$origIdColumn] = $id;
 
         } elseif ($this->DATA[$origIdColumn] > 0) {
@@ -492,5 +504,62 @@ abstract class AbstractInstance
     protected function hasPageTotal(string $fieldName): bool
     {
         return isset($this->PAGES_TOTAL[$fieldName]);
+    }
+
+    public static function create(array $params): static
+    {
+        $instance = new static();
+
+        static::feedInstance($instance, $params);
+
+        $instance->save();
+
+        return $instance;
+    }
+
+    public static function update(AbstractInstance $instance, array $params): static
+    {
+        static::feedInstance($instance, $params);
+
+        $instance->save();
+
+        return $instance;
+    }
+
+    public static function feedInstance(AbstractInstance $instance, array $params): static
+    {
+        $schema = Schema::get(static::GENERATED_TYPE);
+
+        foreach ($params as $param => $value) {
+
+            $field = $schema->getField($param);
+
+            if ($field instanceof StringChoiceField) {
+                $instance->_setStringChoiceVal($param, clearInput($value));
+
+            } elseif ($field instanceof StringField || $field instanceof EmailField || $field instanceof HTMLField) {
+                $instance->_setStringVal($param, clearInput($value));
+
+            } elseif ($field instanceof DateTimeField) {
+                $instance->_setDateTimeVal($param, $value);
+
+            } elseif ($field instanceof IntegerChoiceField) {
+                $instance->_setIntegerChoiceVal($param, (int)$value);
+
+            } elseif ($field instanceof IntegerField && !($field instanceof IdField)) {
+                $instance->_setIntegerVal($param, (int)$value);
+
+            } elseif ($field instanceof FloatField) {
+                $instance->_setFloatVal($param, (float)$value);
+
+            } elseif ($field instanceof JSONField) {
+                $instance->_setJsonVal($param, $value);
+
+            } elseif ($field instanceof ColorField) {
+                $instance->_setColorVal($param, $value);
+            }
+        }
+
+        return $instance;
     }
 }

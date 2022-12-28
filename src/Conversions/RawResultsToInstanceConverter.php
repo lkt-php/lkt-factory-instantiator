@@ -55,7 +55,7 @@ final class RawResultsToInstanceConverter
         $allFields = $this->allFields;
         $result = [];
 
-        return array_reduce($fields, function (&$result, AbstractField $field) use ($data, $allFields) {
+        return array_reduce($fields, function ($result, AbstractField $field) use ($data, $allFields) {
             $searchKey = $field->getName();
             $storeKey = $field->getName();
 
@@ -90,7 +90,7 @@ final class RawResultsToInstanceConverter
         $allFields = $this->allFields;
         $result = [];
 
-        return array_reduce($fields, function (&$result, $field) use ($data, $allFields) {
+        return array_reduce($fields, function ($result, $field) use ($data, $allFields) {
 
             $name = $field->getName();
             $value = isset($data[$name]) ? $data[$name] : null;

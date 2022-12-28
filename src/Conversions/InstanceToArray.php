@@ -20,7 +20,7 @@ class InstanceToArray
         $fields = $schema->getAllFields();
         $r = [];
 
-        return array_reduce($fields, function (&$r,AbstractField $field) use ($instance) {
+        return array_reduce($fields, function ($r,AbstractField $field) use ($instance) {
             $name = $field->getName();
             if ($field instanceof BooleanField) {
                 $r[$name] = $instance->{$name}();

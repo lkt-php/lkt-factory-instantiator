@@ -97,7 +97,11 @@ class ParseColumn
      */
     public static function dateTimeDatum($value): ?Carbon
     {
-        $value = trim($value);
+        if (is_null($value)) {
+            $value = '';
+        } else {
+            $value = trim($value);
+        }
         if ($value === '') {
             return null;
         }
