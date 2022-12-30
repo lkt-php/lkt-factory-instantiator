@@ -10,6 +10,7 @@ use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
 use Lkt\Factory\Schemas\Fields\EmailField;
+use Lkt\Factory\Schemas\Fields\EncryptField;
 use Lkt\Factory\Schemas\Fields\FileField;
 use Lkt\Factory\Schemas\Fields\FloatField;
 use Lkt\Factory\Schemas\Fields\ForeignKeysField;
@@ -35,6 +36,7 @@ class ParseFieldValue
         if ($field instanceof StringField
             || $field instanceof EmailField
             || $field instanceof ColorField
+            || $field instanceof EncryptField
             || $field instanceof ForeignKeysField) {
             return ParseColumn::stringDatum($value);
         }

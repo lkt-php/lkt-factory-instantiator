@@ -12,6 +12,7 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnDateTimeTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnEmailTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnEncryptTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnFileTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnFloatTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnForeignListTrait;
@@ -65,20 +66,24 @@ abstract class AbstractInstance
         ColumnDateTimeTrait,
         ColumnStringChoiceTrait,
         ColumnIntegerChoiceTrait,
+        ColumnEncryptTrait,
         ColumnRelatedKeysMergeTrait;
 
     protected $TYPE;
-    protected $DATA = [];
-    protected $UPDATED = [];
-    protected $PIVOT = [];
-    protected $PIVOT_DATA = [];
-    protected $UPDATED_PIVOT_DATA = [];
-    protected $RELATED_DATA = [];
-    protected $UPDATED_RELATED_DATA = [];
-    protected $PENDING_UPDATE_RELATED_DATA = [];
-    protected $PAGES = [];
-    protected $PAGES_TOTAL = [];
+    protected array $DATA = [];
+    protected array $UPDATED = [];
+    protected array $PIVOT = [];
+    protected array $PIVOT_DATA = [];
+    protected array $UPDATED_PIVOT_DATA = [];
+    protected array $RELATED_DATA = [];
+    protected array $UPDATED_RELATED_DATA = [];
+    protected array $PENDING_UPDATE_RELATED_DATA = [];
+    protected array $PAGES = [];
+    protected array $PAGES_TOTAL = [];
     const GENERATED_TYPE = '';
+
+    protected array $DECRYPT = [];
+    protected array $DECRYPT_UPDATED = [];
 
     /**
      * @param $id
