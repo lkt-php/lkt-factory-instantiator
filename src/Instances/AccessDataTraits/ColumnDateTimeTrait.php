@@ -38,6 +38,19 @@ trait ColumnDateTimeTrait
 
     /**
      * @param string $fieldName
+     * @param string|null $format
+     * @return string
+     */
+    protected function _getDateTimeFormattedIntlVal(string $fieldName, string $format = null) :string
+    {
+        if (!$this->_hasDateTimeVal($fieldName)) {
+            return '';
+        }
+        return \IntlDateFormatter::formatObject($this->_getDateTimeVal($fieldName), $format);
+    }
+
+    /**
+     * @param string $fieldName
      * @return bool
      */
     protected function _hasDateTimeVal(string $fieldName) :bool
