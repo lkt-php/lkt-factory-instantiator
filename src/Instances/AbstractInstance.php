@@ -99,25 +99,17 @@ abstract class AbstractInstance
         $this->DATA = $initialData;
     }
 
-    /**
-     * @param array $initialData
-     * @return $this
-     */
-    public function setData(array $initialData): self
+    public function setData(array $initialData): static
     {
         $this->DATA = $initialData;
         return $this;
     }
 
     /**
-     * @param $id
-     * @param string $component
-     * @param array $initialData
-     * @return static
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = [])
+    public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): static
     {
         if (!$component) {
             $component = static::GENERATED_TYPE;
@@ -165,9 +157,6 @@ abstract class AbstractInstance
         return new static();
     }
 
-    /**
-     * @return bool
-     */
     public function isAnonymous(): bool
     {
         return count($this->DATA) === 0;
@@ -187,49 +176,31 @@ abstract class AbstractInstance
     }
 
     /**
-     * @param string $component
-     * @return AbstractInstance|null
      * @throws InvalidComponentException
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    public function convertToComponent(string $component = ''): ?AbstractInstance
+    public function convertToComponent(string $component = ''): ?static
     {
         return Instantiator::make($component, $this->getIdColumnValue());
     }
 
 
-    public function hydrate(array $data)
+    public function hydrate(array $data): static
     {
         if (count($data) === 0) {
             $this->UPDATED = [];
-            return;
+            return $this;
         }
         foreach ($data as $column => $datum) {
             $this->UPDATED[$column] = $datum;
         }
+        return $this;
     }
 
-    public function save(): self
+    public function save(): static
     {
-//        $isValid = true;
         $isUpdate = !$this->isAnonymous();
-//        if($this->isAnonymous()){
-//            $validationClassName = FactorySettings::getComponentCreateValidationClassName(static::GENERATED_TYPE);
-//            if ($validationClassName) {
-//                $isValid = $validationClassName::getInstance($this);
-//            }
-//            $isUpdate = false;
-//        } else {
-//            $validationClassName = FactorySettings::getComponentUpdateValidationClassName(static::GENERATED_TYPE);
-//            if ($validationClassName) {
-//                $isValid = $validationClassName::getInstance($this);
-//            }
-//        }
-//
-//        if (!$isValid) {
-//            return -1;
-//        }
 
         /**
          * @var Schema $schema
@@ -337,7 +308,7 @@ abstract class AbstractInstance
         return $this;
     }
 
-    public function delete()
+    public function delete(): static
     {
         if ($this->isAnonymous()) {
             return $this;
@@ -402,7 +373,6 @@ abstract class AbstractInstance
     }
 
     /**
-     * @param QueryCaller $queryCaller
      * @return AbstractInstance|null
      * @throws InvalidComponentException
      * @throws InvalidSchemaAppClassException
