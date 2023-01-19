@@ -26,6 +26,18 @@ trait ColumnStringChoiceTrait
         return $this->DATA[$checkField] === true;
     }
 
+    protected function _stringChoiceIn(string $fieldName, array $values) :bool
+    {
+        $value = $this->_getStringChoiceVal($fieldName);
+        return in_array($value, $values, true);
+    }
+
+    protected function _stringChoiceEqual(string $fieldName, string $compared) :bool
+    {
+        $value = $this->_getStringChoiceVal($fieldName);
+        return $value === $compared;
+    }
+
     protected function _setStringChoiceVal(string $fieldName, string $value = null): void
     {
         $schema = Schema::get(static::GENERATED_TYPE);

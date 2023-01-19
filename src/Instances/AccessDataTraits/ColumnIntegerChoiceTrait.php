@@ -26,6 +26,18 @@ trait ColumnIntegerChoiceTrait
         return $this->DATA[$checkField] === true;
     }
 
+    protected function _integerChoiceIn(string $fieldName, array $values) :bool
+    {
+        $value = $this->_getIntegerChoiceVal($fieldName);
+        return in_array($value, $values, true);
+    }
+
+    protected function _integerChoiceEqual(string $fieldName, int $compared) :bool
+    {
+        $value = $this->_getIntegerChoiceVal($fieldName);
+        return $value === $compared;
+    }
+
     protected function _setIntegerChoiceVal(string $fieldName, int $value = null): void
     {
         $schema = Schema::get(static::GENERATED_TYPE);

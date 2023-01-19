@@ -58,8 +58,9 @@ trait ColumnRelatedTrait
      * @param string $type
      * @param $column
      * @param $forceRefresh
-     * @return array
+     * @return null|\Lkt\Factory\Instantiator\Instances\AbstractInstance
      * @throws InvalidComponentException
+     * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
     protected function _getRelatedValSingle(string $type = '', $column = '', $forceRefresh = false)
@@ -78,7 +79,7 @@ trait ColumnRelatedTrait
 
         $idColumn = $schema->getIdString();
         if (!$this->DATA[$idColumn]) {
-            return [];
+            return null;
         }
 
         $caller = $this->_getRelatedInstanceFactory($type, $column, $forceRefresh);
