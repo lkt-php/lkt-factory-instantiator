@@ -37,7 +37,7 @@ trait ColumnRelatedKeysTrait
         $schema = Schema::get(static::GENERATED_TYPE);
         /** @var RelatedKeysField $field */
         $field = $schema->getField($column);
-        $caller = $this->_getRelatedKeysInstanceFactory($type, $column, $forceRefresh);
+        $caller = $this->_getRelatedKeysQueryCaller($type, $column, $forceRefresh);
 
         $data = $caller->select();
         $relatedSchema = Schema::get($field->getComponent());
@@ -46,19 +46,6 @@ trait ColumnRelatedKeysTrait
 
         $this->RELATED_DATA[$column] = $results;
         return $this->RELATED_DATA[$column];
-    }
-
-    /**
-     * @param $type
-     * @param $column
-     * @param $forceRefresh
-     * @return Query|QueryCaller|null
-     * @throws InvalidComponentException
-     * @throws SchemaNotDefinedException
-     */
-    protected function _getRelatedKeysInstanceFactory($type = '', $column = '', $forceRefresh = false)
-    {
-        return$this->_getRelatedKeysQueryCaller($type, $column, $forceRefresh);
     }
 
     /**

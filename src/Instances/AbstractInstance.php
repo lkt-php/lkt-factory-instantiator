@@ -81,16 +81,16 @@ abstract class AbstractInstance
     protected array $PAGES = [];
     protected array $PAGES_TOTAL = [];
     const GENERATED_TYPE = '';
+    const COMPONENT = '';
 
     protected array $DECRYPT = [];
     protected array $DECRYPT_UPDATED = [];
 
     /**
-     * @param $id
      * @param string|null $component
      * @param array $initialData
      */
-    public function __construct($id = 0, string $component = null, array $initialData = [])
+    public function __construct(string $component = null, array $initialData = [])
     {
         if (!$component && static::GENERATED_TYPE) {
             $component = static::GENERATED_TYPE;
@@ -126,7 +126,7 @@ abstract class AbstractInstance
         }
 
         if (count($initialData) > 0) {
-            $r = new static($id, $component, $initialData);
+            $r = new static($component, $initialData);
             $r->setData($initialData);
             InstanceCache::store($code, $r);
             return InstanceCache::load($code);
@@ -148,7 +148,7 @@ abstract class AbstractInstance
             $converter = new RawResultsToInstanceConverter($component, $data[0]);
             $itemData = $converter->parse();
 
-            $r = new static($id, $component, $itemData);
+            $r = new static($component, $itemData);
             $r->setData($itemData);
             InstanceCache::store($code, $r);
             return InstanceCache::load($code);

@@ -43,7 +43,7 @@ trait ColumnRelatedTrait
             return [];
         }
 
-        $caller = $this->_getRelatedInstanceFactory($type, $column, $forceRefresh);
+        $caller = $this->_getRelatedQueryCaller($type, $column, $forceRefresh);
 
         $data = $caller->select();
         $relatedSchema = Schema::get($field->getComponent());
@@ -82,7 +82,7 @@ trait ColumnRelatedTrait
             return null;
         }
 
-        $caller = $this->_getRelatedInstanceFactory($type, $column, $forceRefresh);
+        $caller = $this->_getRelatedQueryCaller($type, $column, $forceRefresh);
 
         $data = $caller->select();
         $relatedSchema = Schema::get($field->getComponent());
@@ -91,15 +91,6 @@ trait ColumnRelatedTrait
 
         $this->RELATED_DATA[$column] = $results[0];
         return $this->RELATED_DATA[$column];
-    }
-
-    /**
-     * @throws InvalidComponentException
-     * @throws SchemaNotDefinedException
-     */
-    protected function _getRelatedInstanceFactory($type = '', $column = '', $forceRefresh = false)
-    {
-        return $this->_getRelatedQueryCaller($type, $column, $forceRefresh);
     }
 
     /**
@@ -255,7 +246,7 @@ trait ColumnRelatedTrait
         /** @var RelatedField $field */
         $field = $schema->getField($fieldName);
 
-        $caller = $this->_getRelatedInstanceFactory($type, $fieldName);
+        $caller = $this->_getRelatedQueryCaller($type, $fieldName);
         $caller->pagination($page, $field->getItemsPerPage());
 
         if ($where instanceof Where) {
@@ -291,7 +282,7 @@ trait ColumnRelatedTrait
             $countableField = $relatedSchema->getIdString();
         }
 
-        $caller = $this->_getRelatedInstanceFactory($type, $fieldName);
+        $caller = $this->_getRelatedQueryCaller($type, $fieldName);
 
         if ($where instanceof Where) {
             $caller->andWhere($where);

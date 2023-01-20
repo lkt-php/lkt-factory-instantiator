@@ -12,6 +12,7 @@ use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Where;
 use Lkt\QueryCaller\QueryCaller;
+use function Lkt\Tools\Arrays\compareArrays;
 
 class Instantiator
 {
@@ -162,5 +163,24 @@ class Instantiator
     {
         $processor = new ProcessQueryCallerData($component, $caller, $data, $processRules, $filterRules);
         $processor->process();
+    }
+
+    public static function updateRelatedIds(string $component, array $currentIds, array $updatedIds, array $updatedInstancesData): void
+    {
+        $diff = compareArrays($currentIds, $updatedIds);
+
+        foreach ($diff['deleted'] as $id) {
+            $instance = static::make($component, $id);
+            if (method_exists($instance, 'doDelete')) {
+                $instance->doDelete();
+            } else {
+                $instance->delete();
+            }
+        }
+
+        foreach ($updatedInstancesData as $id => $item) {
+            $instance = Instantiator::make($component, $id);
+            $instance->hydrate($item)->save();
+        }
     }
 }
