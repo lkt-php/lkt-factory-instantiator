@@ -80,7 +80,7 @@ class Instantiator
                 $converter = new RawResultsToInstanceConverter($component, $item);
                 $itemData = $converter->parse();
 
-                $r = new $appClass($itemId, $component, $itemData);
+                $r = new $appClass($component, $itemData);
                 $r->setData($itemData);
                 $code = Instantiator::getInstanceCode($component, $itemId);
                 InstanceCache::store($code, $r);

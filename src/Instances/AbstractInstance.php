@@ -176,6 +176,7 @@ abstract class AbstractInstance
     }
 
     /**
+     * @deprecated
      * @throws InvalidComponentException
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
