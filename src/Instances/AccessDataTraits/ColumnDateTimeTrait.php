@@ -33,7 +33,9 @@ trait ColumnDateTimeTrait
         if (!$this->_hasDateTimeVal($fieldName)) {
             return '';
         }
-        return $this->_getDateTimeVal($fieldName)->format($format);
+        $r = $this->_getDateTimeVal($fieldName)->format($format);
+        if (str_starts_with($r, '-')) return '';
+        return $r;
     }
 
     /**
