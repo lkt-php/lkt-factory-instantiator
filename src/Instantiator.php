@@ -10,8 +10,8 @@ use Lkt\Factory\Instantiator\Process\ProcessQueryCallerData;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\Where;
-use Lkt\QueryCaller\QueryCaller;
 use function Lkt\Tools\Arrays\compareArrays;
 
 class Instantiator
@@ -99,7 +99,7 @@ class Instantiator
     public static function getQueryCaller(string $component): array
     {
         $schema = Schema::get($component);
-        $caller = QueryCaller::table($schema->getTable());
+        $caller = Query::table($schema->getTable());
 
         $connector = $schema->getDatabaseConnector();
         if ($connector === '') {
@@ -119,7 +119,7 @@ class Instantiator
             $caller = call_user_func_array([$fqdn, 'getCaller'], []);
 
         } else {
-            $caller = QueryCaller::table($schema->getTable());
+            $caller = Query::table($schema->getTable());
         }
 
         static::filterQueryCaller($component, $caller, $data, $processRules, $filterRules);
@@ -148,7 +148,7 @@ class Instantiator
         return $where;
     }
 
-    public static function prepareQueryCaller(string $component, QueryCaller &$caller): void
+    public static function prepareQueryCaller(string $component, Query &$caller): void
     {
         $schema = Schema::get($component);
         $connector = $schema->getDatabaseConnector();
@@ -159,7 +159,7 @@ class Instantiator
         $caller->setColumns($connection->extractSchemaColumns($schema));
     }
 
-    public static function filterQueryCaller(string $component, QueryCaller &$caller, array $data = null, array $processRules = null, array $filterRules = null)
+    public static function filterQueryCaller(string $component, Query &$caller, array $data = null, array $processRules = null, array $filterRules = null)
     {
         $processor = new ProcessQueryCallerData($component, $caller, $data, $processRules, $filterRules);
         $processor->process();

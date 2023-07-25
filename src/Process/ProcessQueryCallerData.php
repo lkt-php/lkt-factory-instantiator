@@ -11,7 +11,7 @@ use Lkt\Factory\Schemas\Schema;
 use Lkt\Factory\Schemas\Values\ComponentValue;
 use Lkt\QueryBuilding\Enums\FilterRule;
 use Lkt\QueryBuilding\Enums\ProcessRule;
-use Lkt\QueryCaller\QueryCaller;
+use Lkt\QueryBuilding\Query;
 use function Lkt\Tools\Parse\clearInput;
 
 final class ProcessQueryCallerData
@@ -23,7 +23,7 @@ final class ProcessQueryCallerData
     protected $filterRules;
     protected $schema;
 
-    public function __construct(string $component, QueryCaller $caller, array $data = null, array $processRules = null, array $filterRules = null)
+    public function __construct(string $component, Query $caller, array $data = null, array $processRules = null, array $filterRules = null)
     {
         $this->component = new ComponentValue($component);
         $this->schema = Schema::get($this->component->getValue());

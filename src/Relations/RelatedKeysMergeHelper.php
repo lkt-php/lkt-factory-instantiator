@@ -6,7 +6,7 @@ use Lkt\DatabaseConnectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\Factory\Schemas\Fields\RelatedKeysMergeField;
-use Lkt\QueryCaller\QueryCaller;
+use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\QueryUnion;
 
 class RelatedKeysMergeHelper
@@ -54,7 +54,7 @@ class RelatedKeysMergeHelper
             }
 
             /**
-             * @var QueryCaller $caller
+             * @var Query $caller
              */
             list($caller) = Instantiator::getCustomQueryCaller($component);
             $caller->setColumns([$idColumn, "'{$component}' as component", ...$additionalColumnsParsed]);

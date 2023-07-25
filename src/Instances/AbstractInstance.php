@@ -43,7 +43,7 @@ use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
 use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Schema;
-use Lkt\QueryCaller\QueryCaller;
+use Lkt\QueryBuilding\Query;
 use function Lkt\Tools\Arrays\compareArrays;
 use function Lkt\Tools\Pagination\getTotalPages;
 use function Lkt\Tools\Parse\clearInput;
@@ -134,7 +134,7 @@ abstract class AbstractInstance
         /**
          * @var Schema $schema
          * @var DatabaseConnector $connection
-         * @var QueryCaller $queryBuilder
+         * @var Query $queryBuilder
          */
         list($caller, $connection, $schema) = Instantiator::getQueryCaller($component);
         $identifiers = $schema->getIdentifiers();
@@ -206,7 +206,7 @@ abstract class AbstractInstance
         /**
          * @var Schema $schema
          * @var DatabaseConnector $connection
-         * @var QueryCaller $queryBuilder
+         * @var Query $queryBuilder
          */
         list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
         $parsed = $connection->prepareDataToStore($schema, $this->UPDATED);
@@ -318,7 +318,7 @@ abstract class AbstractInstance
         /**
          * @var Schema $schema
          * @var DatabaseConnector $connection
-         * @var QueryCaller $caller
+         * @var Query $caller
          */
         list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
 
@@ -345,27 +345,27 @@ abstract class AbstractInstance
     }
 
     /**
-     * @return QueryCaller
+     * @return Query
      * @throws SchemaNotDefinedException
      */
     public static function getQueryCaller()
     {
         /**
-         * @var QueryCaller $caller
+         * @var Query $caller
          */
         list($caller) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
         return $caller;
     }
 
     /**
-     * @param QueryCaller $queryCaller
+     * @param Query $queryCaller
      * @return array
      * @throws InvalidComponentException
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      * @throws Exception
      */
-    public static function getMany(QueryCaller $queryCaller = null): array
+    public static function getMany(Query $queryCaller = null): array
     {
         if (!$queryCaller) {
             $queryCaller = static::getQueryCaller();
@@ -379,7 +379,7 @@ abstract class AbstractInstance
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    public static function getOne(QueryCaller $queryCaller = null)
+    public static function getOne(Query $queryCaller = null)
     {
         if (!$queryCaller) {
             $queryCaller = static::getQueryCaller();
@@ -393,12 +393,12 @@ abstract class AbstractInstance
     }
 
     /**
-     * @param QueryCaller $queryCaller
+     * @param Query $queryCaller
      * @param string|null $countableField
      * @return int
      * @throws SchemaNotDefinedException
      */
-    public static function getCount(QueryCaller $queryCaller = null, string $countableField = null): int
+    public static function getCount(Query $queryCaller = null, string $countableField = null): int
     {
         if (!$queryCaller) {
             $queryCaller = static::getQueryCaller();
@@ -417,12 +417,12 @@ abstract class AbstractInstance
     }
 
     /**
-     * @param QueryCaller $queryCaller
+     * @param Query $queryCaller
      * @param string|null $countableField
      * @return int
      * @throws SchemaNotDefinedException
      */
-    public static function getAmountOfPages(QueryCaller $queryCaller = null, string $countableField = null): int
+    public static function getAmountOfPages(Query $queryCaller = null, string $countableField = null): int
     {
         $total = static::getCount($queryCaller, $countableField);
         if ($total === 0) {
@@ -439,13 +439,13 @@ abstract class AbstractInstance
 
     /**
      * @param int $page
-     * @param QueryCaller|null $queryCaller
+     * @param Query|null $queryCaller
      * @return array
      * @throws InvalidComponentException
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    public static function getPage(int $page, QueryCaller $queryCaller = null): array
+    public static function getPage(int $page, Query $queryCaller = null): array
     {
         if (!$queryCaller) {
             $queryCaller = static::getQueryCaller();
