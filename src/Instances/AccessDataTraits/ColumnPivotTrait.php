@@ -14,8 +14,8 @@ use Lkt\Factory\Schemas\Fields\PivotField;
 use Lkt\Factory\Schemas\Fields\PivotLeftIdField;
 use Lkt\Factory\Schemas\Fields\PivotRightIdField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\Where;
-use Lkt\QueryCaller\QueryCaller;
 use function Lkt\Tools\Arrays\arrayPushUnique;
 use function Lkt\Tools\Arrays\getArrayFirstPosition;
 
@@ -47,7 +47,7 @@ trait ColumnPivotTrait
         $where = $field->getWhere();
 
         $order = $field->getOrder();
-        $caller = QueryCaller::table($pivotedSchema->getTable());
+        $builder = Query::table($pivotedSchema->getTable());
 
         $connector = $schema->getDatabaseConnector();
         if ($connector === '') {
@@ -55,12 +55,12 @@ trait ColumnPivotTrait
         }
         $connection = DatabaseConnections::get($connector);
         $where[] = $connection->makeUpdateParams([$pivotedFieldColumn => $this->DATA[$idColumn]]);
-        $caller->setColumns($connection->extractSchemaColumns($pivotedSchema));
+        $builder->setColumns($connection->extractSchemaColumns($pivotedSchema));
 
-        $caller->where(Where::raw(implode(' AND ', $where)));
-        $caller->orderBy(implode(',', $order));
+        $builder->where(Where::raw(implode(' AND ', $where)));
+        $builder->orderBy(implode(',', $order));
 
-        $results = $caller->select();
+        $results = $builder->select();
         $pivots = Instantiator::makeResults($pivotedSchema->getComponent(), $results);
 
         $this->PIVOT[$column] = $pivots;
@@ -155,14 +155,14 @@ trait ColumnPivotTrait
         $order = trim(implode(', ', $order));
 
         /**
-         * @var QueryCaller $caller
+         * @var Query $builder
          */
-        list($caller) = Instantiator::getQueryCaller($toSchema->getComponent());
+        list($builder) = Instantiator::getQueryCaller($toSchema->getComponent());
 
 //        $caller->andIntegerIn($toColumnString, $ids);
-        $caller->where(Where::raw($where));
-        $caller->orderBy($order);
-        $results = Instantiator::makeResults($toSchema->getComponent(), $caller->select());
+        $builder->where(Where::raw($where));
+        $builder->orderBy($order);
+        $results = Instantiator::makeResults($toSchema->getComponent(), $builder->select());
 
         $this->PIVOT_DATA[$column] = $results;
         return $this->PIVOT_DATA[$column];

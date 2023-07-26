@@ -50,7 +50,7 @@ trait ColumnEncryptTrait
         return $this->DATA[$checkField] === true;
     }
 
-    protected function _setEncryptVal(string $fieldName, string $value = null): void
+    protected function _setEncryptVal(string $fieldName, string $value = null): static
     {
         $schema = Schema::get(static::GENERATED_TYPE);
         $field = $schema->getField($fieldName);
@@ -65,5 +65,6 @@ trait ColumnEncryptTrait
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

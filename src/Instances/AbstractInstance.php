@@ -111,12 +111,9 @@ abstract class AbstractInstance
      */
     public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): static
     {
-        if (!$component) {
-            $component = static::GENERATED_TYPE;
-        }
-        if (!$id || !$component) {
-            return new static();
-        }
+        if (!$component) $component = static::GENERATED_TYPE;
+        if (!$id || !$component) return new static();
+
         $code = Instantiator::getInstanceCode($component, $id);
 
         if (InstanceCache::inCache($code)) {
@@ -136,14 +133,12 @@ abstract class AbstractInstance
          * @var DatabaseConnector $connection
          * @var Query $queryBuilder
          */
-        list($caller, $connection, $schema) = Instantiator::getQueryCaller($component);
+        list($builder, $connection, $schema) = Instantiator::getQueryCaller($component);
         $identifiers = $schema->getIdentifiers();
 
-        foreach ($identifiers as $identifier) {
-            $caller->andIntegerEqual($identifier->getColumn(), $id);
-        }
+        foreach ($identifiers as $identifier) $builder->andIntegerEqual($identifier->getColumn(), $id);
 
-        $data = $caller->selectDistinct();
+        $data = $builder->selectDistinct();
         if (count($data) > 0) {
             $converter = new RawResultsToInstanceConverter($component, $data[0]);
             $itemData = $converter->parse();
@@ -193,9 +188,7 @@ abstract class AbstractInstance
             $this->UPDATED = [];
             return $this;
         }
-        foreach ($data as $column => $datum) {
-            $this->UPDATED[$column] = $datum;
-        }
+        foreach ($data as $column => $datum) $this->UPDATED[$column] = $datum;
         return $this;
     }
 
@@ -311,9 +304,7 @@ abstract class AbstractInstance
 
     public function delete(): static
     {
-        if ($this->isAnonymous()) {
-            return $this;
-        }
+        if ($this->isAnonymous()) return $this;
 
         /**
          * @var Schema $schema
@@ -358,8 +349,6 @@ abstract class AbstractInstance
     }
 
     /**
-     * @param Query $queryCaller
-     * @return array
      * @throws InvalidComponentException
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
@@ -381,9 +370,7 @@ abstract class AbstractInstance
      */
     public static function getOne(Query $queryCaller = null)
     {
-        if (!$queryCaller) {
-            $queryCaller = static::getQueryCaller();
-        }
+        if (!$queryCaller) $queryCaller = static::getQueryCaller();
         $queryCaller->pagination(1, 1);
         $r = Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
         if (count($r) > 0) {
@@ -393,47 +380,32 @@ abstract class AbstractInstance
     }
 
     /**
-     * @param Query $queryCaller
-     * @param string|null $countableField
-     * @return int
      * @throws SchemaNotDefinedException
      */
     public static function getCount(Query $queryCaller = null, string $countableField = null): int
     {
-        if (!$queryCaller) {
-            $queryCaller = static::getQueryCaller();
-        }
+        if (!$queryCaller) $queryCaller = static::getQueryCaller();
 
         if (!$countableField) {
             $schema = Schema::get(static::GENERATED_TYPE);
             $countableField = $schema->getCountableField();
         }
 
-        if (!$countableField) {
-            return 0;
-        }
+        if (!$countableField) return 0;
 
         return $queryCaller->count($countableField);
     }
 
     /**
-     * @param Query $queryCaller
-     * @param string|null $countableField
-     * @return int
      * @throws SchemaNotDefinedException
      */
     public static function getAmountOfPages(Query $queryCaller = null, string $countableField = null): int
     {
         $total = static::getCount($queryCaller, $countableField);
-        if ($total === 0) {
-            return 0;
-        }
+        if ($total === 0) return 0;
         $schema = Schema::get(static::GENERATED_TYPE);
         $itemsPerPage = $schema->getItemsPerPage();
-        if ($itemsPerPage <= 0) {
-            return 0;
-        }
-
+        if ($itemsPerPage <= 0) return 0;
         return getTotalPages($total, $itemsPerPage);
     }
 
@@ -447,16 +419,10 @@ abstract class AbstractInstance
      */
     public static function getPage(int $page, Query $queryCaller = null): array
     {
-        if (!$queryCaller) {
-            $queryCaller = static::getQueryCaller();
-        }
+        if (!$queryCaller) $queryCaller = static::getQueryCaller();
         $schema = Schema::get(static::GENERATED_TYPE);
         $limit = $schema->getItemsPerPage();
-
-        if ($limit >= 0) {
-            $queryCaller->pagination($page, $limit);
-        }
-
+        if ($limit >= 0) $queryCaller->pagination($page, $limit);
         return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
     }
 
@@ -472,8 +438,7 @@ abstract class AbstractInstance
 
     protected function hasPageLoaded(string $fieldName, int $page): bool
     {
-        return isset($this->PAGES[$fieldName])
-            && isset($this->PAGES[$fieldName][$page])
+        return isset($this->PAGES[$fieldName][$page])
             && is_array($this->PAGES[$fieldName][$page]);
     }
 
@@ -485,21 +450,14 @@ abstract class AbstractInstance
     public static function create(array $params): static
     {
         $instance = new static();
-
         static::feedInstance($instance, $params);
-
-        $instance->save();
-
-        return $instance;
+        return $instance->save();
     }
 
     public static function update(AbstractInstance $instance, array $params): static
     {
         static::feedInstance($instance, $params);
-
-        $instance->save();
-
-        return $instance;
+        return $instance->save();
     }
 
     public static function feedInstance(AbstractInstance $instance, array $params): static

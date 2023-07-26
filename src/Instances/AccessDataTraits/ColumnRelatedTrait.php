@@ -9,8 +9,8 @@ use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\Where;
-use Lkt\QueryCaller\QueryCaller;
 use function Lkt\Tools\Arrays\implodeWithOR;
 use function Lkt\Tools\Pagination\getTotalPages;
 
@@ -97,7 +97,7 @@ trait ColumnRelatedTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedQueryCaller($type = '', $column = '', $forceRefresh = false)
+    protected function _getRelatedQueryBuilder($type = '', $column = '', $forceRefresh = false)
     {
         if (!$type) {
             return null;
@@ -112,10 +112,10 @@ trait ColumnRelatedTrait
         $where = $field->getWhere();
 
         /**
-         * @var QueryCaller $caller
+         * @var Query $builder
          * @var DatabaseConnector $connection
          */
-        list($caller, $connection) = Instantiator::getQueryCaller($field->getComponent());
+        list($builder, $connection) = Instantiator::getQueryCaller($field->getComponent());
 
         if ($field->hasMultipleReferences()){
             $temp = [];
@@ -135,15 +135,77 @@ trait ColumnRelatedTrait
             $order = [];
         }
 
-        $caller->andRaw(implode(' AND ', $where));
-        $caller->orderBy(implode(',', $order));
-        $caller->setForceRefresh($forceRefresh);
+        $builder->andRaw(implode(' AND ', $where));
+        $builder->orderBy(implode(',', $order));
+        $builder->setForceRefresh($forceRefresh);
 
         if ($field->isSingleMode()) {
-            $caller->pagination(1, 1);
+            $builder->pagination(1, 1);
         }
 
-        return $caller;
+        return $builder;
+    }
+
+    /**
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getRelatedQueryCaller($type = '', $column = '', $forceRefresh = false)
+    {
+        return $this->_getRelatedQueryBuilder($type, $column, $forceRefresh);
+    }
+
+    /**
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getRelatedCustomQueryBuilder($type = '', $column = '', $forceRefresh = false)
+    {
+        if (!$type) {
+            return null;
+        }
+
+        $schema = Schema::get(static::GENERATED_TYPE);
+
+        $idColumn = $schema->getIdString();
+        /** @var RelatedField $field */
+        $field = $schema->getField($column);
+
+        $where = $field->getWhere();
+
+        /**
+         * @var Query $builder
+         * @var DatabaseConnector $connection
+         */
+        list($builder, $connection) = Instantiator::getCustomQueryCaller($field->getComponent());
+
+        if ($field->hasMultipleReferences()){
+            $temp = [];
+            foreach ($field->getMultipleReferences() as $reference)  {
+                $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
+            }
+
+            $where[] = '(' . implodeWithOR($temp) . ')';
+
+        } else {
+            if ($this->DATA[$idColumn]) {
+                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
+            }
+        }
+        $order = $field->getOrder();
+        if (!is_array($order)){
+            $order = [];
+        }
+
+        $builder->andRaw(implode(' AND ', $where));
+        $builder->orderBy(implode(',', $order));
+        $builder->setForceRefresh($forceRefresh);
+
+        if ($field->isSingleMode()) {
+            $builder->pagination(1, 1);
+        }
+
+        return $builder;
     }
 
     /**
@@ -152,51 +214,7 @@ trait ColumnRelatedTrait
      */
     protected function _getRelatedCustomQueryCaller($type = '', $column = '', $forceRefresh = false)
     {
-        if (!$type) {
-            return null;
-        }
-
-        $schema = Schema::get(static::GENERATED_TYPE);
-
-        $idColumn = $schema->getIdString();
-        /** @var RelatedField $field */
-        $field = $schema->getField($column);
-
-        $where = $field->getWhere();
-
-        /**
-         * @var QueryCaller $caller
-         * @var DatabaseConnector $connection
-         */
-        list($caller, $connection) = Instantiator::getCustomQueryCaller($field->getComponent());
-
-        if ($field->hasMultipleReferences()){
-            $temp = [];
-            foreach ($field->getMultipleReferences() as $reference)  {
-                $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
-            }
-
-            $where[] = '(' . implodeWithOR($temp) . ')';
-
-        } else {
-            if ($this->DATA[$idColumn]) {
-                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
-            }
-        }
-        $order = $field->getOrder();
-        if (!is_array($order)){
-            $order = [];
-        }
-
-        $caller->andRaw(implode(' AND ', $where));
-        $caller->orderBy(implode(',', $order));
-        $caller->setForceRefresh($forceRefresh);
-
-        if ($field->isSingleMode()) {
-            $caller->pagination(1, 1);
-        }
-
-        return $caller;
+        return $this->_getRelatedCustomQueryBuilder($type, $column, $forceRefresh);
     }
 
     /**

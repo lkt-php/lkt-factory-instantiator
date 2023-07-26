@@ -102,9 +102,7 @@ class Instantiator
         $caller = Query::table($schema->getTable());
 
         $connector = $schema->getDatabaseConnector();
-        if ($connector === '') {
-            $connector = DatabaseConnections::$defaultConnector;
-        }
+        if ($connector === '') $connector = DatabaseConnections::$defaultConnector;
         $connection = DatabaseConnections::get($connector);
         $caller->setColumns($connection->extractSchemaColumns($schema));
 
@@ -116,22 +114,22 @@ class Instantiator
         $schema = Schema::get($component);
         if ($schema->getInstanceSettings()->getQueryCallerClassName() !== '') {
             $fqdn = $schema->getInstanceSettings()->getQueryCallerFQDN();
-            $caller = call_user_func_array([$fqdn, 'getCaller'], []);
+            $builder = call_user_func_array([$fqdn, 'getCaller'], []);
 
         } else {
-            $caller = Query::table($schema->getTable());
+            $builder = Query::table($schema->getTable());
         }
 
-        static::filterQueryCaller($component, $caller, $data, $processRules, $filterRules);
+        static::filterQueryCaller($component, $builder, $data, $processRules, $filterRules);
 
         $connector = $schema->getDatabaseConnector();
         if ($connector === '') {
             $connector = DatabaseConnections::$defaultConnector;
         }
         $connection = DatabaseConnections::get($connector);
-        $caller->setColumns($connection->extractSchemaColumns($schema));
+        $builder->setColumns($connection->extractSchemaColumns($schema));
 
-        return [$caller, $connection, $schema, $connector];
+        return [$builder, $connection, $schema, $connector];
     }
 
     public static function getCustomWhere(string $component): Where
@@ -152,9 +150,7 @@ class Instantiator
     {
         $schema = Schema::get($component);
         $connector = $schema->getDatabaseConnector();
-        if ($connector === '') {
-            $connector = DatabaseConnections::$defaultConnector;
-        }
+        if ($connector === '') $connector = DatabaseConnections::$defaultConnector;
         $connection = DatabaseConnections::get($connector);
         $caller->setColumns($connection->extractSchemaColumns($schema));
     }

@@ -23,11 +23,12 @@ trait ColumnIntegerTrait
         return $this->DATA[$checkField] === true;
     }
 
-    protected function _setIntegerVal(string $fieldName, int $value = null): void
+    protected function _setIntegerVal(string $fieldName, int $value = null): static
     {
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
         ], false);
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

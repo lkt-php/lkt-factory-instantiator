@@ -27,12 +27,13 @@ trait ColumnBooleanTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _setBooleanVal(string $fieldName, bool $value = false): void
+    protected function _setBooleanVal(string $fieldName, bool $value = false): static
     {
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

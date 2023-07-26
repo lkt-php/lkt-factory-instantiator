@@ -42,17 +42,17 @@ trait ColumnFileTrait
     /**
      * @param string $fieldName
      * @param string|null $value
-     * @return void
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _setFileVal(string $fieldName, string $value = null)
+    protected function _setFileVal(string $fieldName, string $value = null): static
     {
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 
     /**

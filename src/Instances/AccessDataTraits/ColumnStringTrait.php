@@ -23,12 +23,13 @@ trait ColumnStringTrait
         return $this->DATA[$checkField] === true;
     }
 
-    protected function _setStringVal(string $fieldName, string $value = null): void
+    protected function _setStringVal(string $fieldName, string $value = null): static
     {
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

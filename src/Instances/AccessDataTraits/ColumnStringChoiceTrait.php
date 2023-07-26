@@ -38,7 +38,7 @@ trait ColumnStringChoiceTrait
         return $value === $compared;
     }
 
-    protected function _setStringChoiceVal(string $fieldName, string $value = null): void
+    protected function _setStringChoiceVal(string $fieldName, string $value = null): static
     {
         $schema = Schema::get(static::GENERATED_TYPE);
         /** @var StringChoiceField $field */
@@ -54,5 +54,6 @@ trait ColumnStringChoiceTrait
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

@@ -6,12 +6,8 @@ use Lkt\Locale\Locale;
 
 class NumberFormatter
 {
-    /** @var \NumberFormatter */
-    protected static $formatter;
+    protected static \NumberFormatter|null $formatter = null;
 
-    /**
-     * @return \NumberFormatter
-     */
     public static function getDecimalNumberFormatter(): \NumberFormatter
     {
         if (!is_object(static::$formatter)) {

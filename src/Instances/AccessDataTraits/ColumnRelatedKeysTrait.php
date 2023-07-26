@@ -11,7 +11,6 @@ use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\Where;
-use Lkt\QueryCaller\QueryCaller;
 
 trait ColumnRelatedKeysTrait
 {
@@ -52,11 +51,11 @@ trait ColumnRelatedKeysTrait
      * @param $type
      * @param $column
      * @param $forceRefresh
-     * @return Query|QueryCaller|null
+     * @return Query|null
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedKeysQueryCaller($type = '', $column = '', $forceRefresh = false)
+    protected function _getRelatedKeysQueryBuilder($type = '', $column = '', $forceRefresh = false)
     {
         if (!$type) {
             return null;
@@ -86,18 +85,31 @@ trait ColumnRelatedKeysTrait
         $order = $field->getOrder();
 
         $relatedSchema = Schema::get($field->getComponent());
-        $caller = QueryCaller::table($relatedSchema->getTable());
+        $builder = Query::table($relatedSchema->getTable());
         $connector = $schema->getDatabaseConnector();
         if ($connector === '') {
             $connector = DatabaseConnections::$defaultConnector;
         }
         $connection = DatabaseConnections::get($connector);
-        $caller->setColumns($connection->extractSchemaColumns($relatedSchema));
+        $builder->setColumns($connection->extractSchemaColumns($relatedSchema));
 
-        $caller->where(Where::raw($whereString));
-        $caller->orderBy(implode(',', $order));
-        $caller->setForceRefresh($forceRefresh);
-        return $caller;
+        $builder->where(Where::raw($whereString));
+        $builder->orderBy(implode(',', $order));
+        $builder->setForceRefresh($forceRefresh);
+        return $builder;
+    }
+
+    /**
+     * @param $type
+     * @param $column
+     * @param $forceRefresh
+     * @return Query|null
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getRelatedKeysQueryCaller($type = '', $column = '', $forceRefresh = false)
+    {
+        return $this->_getRelatedKeysQueryBuilder($type, $column, $forceRefresh);
     }
 
     /**

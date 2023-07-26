@@ -29,45 +29,27 @@ class ParseFieldValue
      */
     public static function parse(AbstractField $field, $value = null)
     {
-        if ($field instanceof HTMLField) {
-            return ParseColumn::HTMLDatumToInstance($value);
-        }
+        if ($field instanceof HTMLField) return ParseColumn::HTMLDatumToInstance($value);
 
         if ($field instanceof StringField
             || $field instanceof EmailField
             || $field instanceof ColorField
             || $field instanceof EncryptField
-            || $field instanceof ForeignKeysField) {
-            return ParseColumn::stringDatum($value);
-        }
+            || $field instanceof ForeignKeysField) return ParseColumn::stringDatum($value);
 
-        if ($field instanceof BooleanField) {
-            return ParseColumn::booleanDatum($value);
-        }
+        if ($field instanceof BooleanField) return ParseColumn::booleanDatum($value);
 
-        if ($field instanceof IntegerField) {
-            return ParseColumn::integerDatum($value);
-        }
+        if ($field instanceof IntegerField) return ParseColumn::integerDatum($value);
 
-        if ($field instanceof FloatField) {
-            return ParseColumn::floatDatum($value);
-        }
+        if ($field instanceof FloatField) return ParseColumn::floatDatum($value);
 
-        if ($field instanceof UnixTimeStampField) {
-            return ParseColumn::unixTimeStampDatum($value);
-        }
+        if ($field instanceof UnixTimeStampField) return ParseColumn::unixTimeStampDatum($value);
 
-        if ($field instanceof DateTimeField) {
-            return ParseColumn::dateTimeDatum($value);
-        }
+        if ($field instanceof DateTimeField) return ParseColumn::dateTimeDatum($value);
 
-        if ($field instanceof JSONField) {
-            return ParseColumn::JSONDatumToInstance($value);
-        }
+        if ($field instanceof JSONField) return ParseColumn::JSONDatumToInstance($value);
 
-        if ($field instanceof FileField) {
-            return ParseColumn::fileDatumToInstance($value, $field);
-        }
+        if ($field instanceof FileField) return ParseColumn::fileDatumToInstance($value, $field);
         return null;
     }
 }

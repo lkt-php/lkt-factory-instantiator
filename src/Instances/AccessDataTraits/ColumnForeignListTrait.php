@@ -106,7 +106,7 @@ trait ColumnForeignListTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _setForeignListVal(string $fieldName, $value = null)
+    protected function _setForeignListVal(string $fieldName, $value = null): static
     {
         if (is_array($value)){
             $value = implode(';', $value);
@@ -118,5 +118,6 @@ trait ColumnForeignListTrait
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

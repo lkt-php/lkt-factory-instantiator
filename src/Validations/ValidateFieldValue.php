@@ -26,46 +26,26 @@ class ValidateFieldValue
      */
     public static function validate(AbstractField $field, $value = null): bool
     {
-        $status = false;
-
-        if ($field instanceof HTMLField) {
-            $status = trim($value) !== '';
-        }
+        if ($field instanceof HTMLField) return trim($value) !== '';
 
         if ($field instanceof StringField
             || $field instanceof EmailField
             || $field instanceof ColorField
-            || $field instanceof ForeignKeysField) {
-            $status = trim($value) !== '';
-        }
+            || $field instanceof ForeignKeysField) return trim($value) !== '';
 
-        if ($field instanceof BooleanField) {
-            $status = (bool)$value === true;
-        }
+        if ($field instanceof BooleanField) return (bool)$value === true;
 
-        if ($field instanceof IntegerField) {
-            $status = (int)$value > 0;
-        }
+        if ($field instanceof IntegerField) return (int)$value > 0;
 
-        if ($field instanceof FloatField) {
-            $status = (float)$value > 0;
-        }
+        if ($field instanceof FloatField) return (float)$value > 0;
 
-        if ($field instanceof UnixTimeStampField) {
-            $status = $value !== null;
-        }
+        if ($field instanceof UnixTimeStampField) return $value !== null;
 
-        if ($field instanceof DateTimeField) {
-            $status = $value !== null;
-        }
+        if ($field instanceof DateTimeField) return $value !== null;
 
-        if ($field instanceof JSONField) {
-            $status = $value !== null;
-        }
+        if ($field instanceof JSONField)  return $value !== null;
 
-        if ($field instanceof FileField) {
-            $status = $value !== null;
-        }
-        return $status;
+        if ($field instanceof FileField) return $value !== null;
+        return false;
     }
 }

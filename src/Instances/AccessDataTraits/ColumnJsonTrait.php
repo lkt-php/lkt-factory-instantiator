@@ -54,11 +54,10 @@ trait ColumnJsonTrait
     /**
      * @param string $fieldName
      * @param $value
-     * @return void
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _setJsonVal(string $fieldName, $value = null)
+    protected function _setJsonVal(string $fieldName, $value = null): static
     {
         if (is_object($value)){
             $value = json_decode(json_encode($value), true);
@@ -70,5 +69,6 @@ trait ColumnJsonTrait
             $fieldName => $value,
         ], false);
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

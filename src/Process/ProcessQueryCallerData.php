@@ -32,24 +32,14 @@ final class ProcessQueryCallerData
         $this->processRules = $processRules;
         $this->filterRules = $filterRules;
 
-        if (!is_array($this->processRules)) {
-            $this->processRules = [];
-        }
-
-        if (!is_array($this->filterRules)) {
-            $this->filterRules = [];
-        }
-
-        if (!is_array($this->data)) {
-            $this->data = [];
-        }
+        if (!is_array($this->processRules)) $this->processRules = [];
+        if (!is_array($this->filterRules)) $this->filterRules = [];
+        if (!is_array($this->data)) $this->data = [];
     }
 
     final public function process(): void
     {
-        if (count($this->data) === 0) {
-            return;
-        }
+        if (count($this->data) === 0) return;
         $fields = $this->schema->getNonRelationalFields();
         $data = $this->data;
         $result = [];
@@ -58,9 +48,7 @@ final class ProcessQueryCallerData
             return in_array($key, $fieldKeys, true);
         }, ARRAY_FILTER_USE_KEY);
 
-        if (count($data) === 0) {
-            return;
-        }
+        if (count($data) === 0) return;
 
         $processRules = $this->processRules;
         $filterRules = $this->filterRules;

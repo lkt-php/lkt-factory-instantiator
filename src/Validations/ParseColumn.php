@@ -80,9 +80,7 @@ class ParseColumn
         } else {
             $str = date('Y-m-d H:i:s', (int)$value);
         }
-        if ($str === '') {
-            return null;
-        }
+        if ($str === '') return null;
         try {
             return new Carbon($str);
 
@@ -102,9 +100,7 @@ class ParseColumn
         } else {
             $value = trim($value);
         }
-        if ($value === '') {
-            return null;
-        }
+        if ($value === '') return null;
 
         try {
             $date = new \DateTime($value);
@@ -125,12 +121,10 @@ class ParseColumn
         if (is_string($value)){
             $value = htmlspecialchars_decode($value);
             $value = ParseColumn::HTMLDatumToInstance($value);
-            $value = json_decode($value, true);
-        } elseif (is_object($value)){
-            $value = json_decode(json_encode($value), true);
-        } elseif (!is_array($value)){
-            return null;
+            return json_decode($value, true);
         }
+        if (is_object($value)) return json_decode(json_encode($value), true);
+        if (!is_array($value)) return null;
         return $value;
     }
 
@@ -142,9 +136,7 @@ class ParseColumn
     public static function fileDatumToInstance($value, FileField $field):? File
     {
         $value = trim($value);
-        if ($value === '') {
-            return null;
-        }
+        if ($value === '') return null;
 
         $directory = new Directory(FileSystemConnection::getDiskDriver(), $field->getStorePath());
         return new File(FileSystemConnection::getDiskDriver(), $directory, $value);

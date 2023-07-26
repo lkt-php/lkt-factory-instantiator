@@ -76,11 +76,10 @@ trait ColumnColorTrait
     /**
      * @param string $fieldName
      * @param $value
-     * @return void
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _setColorVal(string $fieldName, $value = null)
+    protected function _setColorVal(string $fieldName, $value = null): static
     {
         $v = $value;
         if (is_array($v)) {
@@ -91,5 +90,6 @@ trait ColumnColorTrait
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

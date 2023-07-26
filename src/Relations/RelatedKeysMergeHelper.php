@@ -54,14 +54,14 @@ class RelatedKeysMergeHelper
             }
 
             /**
-             * @var Query $caller
+             * @var Query $builder
              */
-            list($caller) = Instantiator::getCustomQueryCaller($component);
-            $caller->setColumns([$idColumn, "'{$component}' as component", ...$additionalColumnsParsed]);
-            $caller->andWhere($where);
+            list($builder) = Instantiator::getCustomQueryCaller($component);
+            $builder->setColumns([$idColumn, "'{$component}' as component", ...$additionalColumnsParsed]);
+            $builder->andWhere($where);
 
-            $relation->applyQueryConfigurator($caller);
-            $queryUnion->addQuery($caller);
+            $relation->applyQueryConfigurator($builder);
+            $queryUnion->addQuery($builder);
         }
 
         return $queryUnion;
@@ -75,22 +75,16 @@ class RelatedKeysMergeHelper
         $masterField = $masterSchema->getField($masterComponentField);
 
         $order = $masterField->getOrder();
-        if (!is_array($order)){
-            $order = [];
-        }
+        if (!is_array($order)) $order = [];
 
         $order = implode(',', $order);
 
-        if ($order !== '') {
-            $queryUnion->orderBy($order);
-        }
+        if ($order !== '') $queryUnion->orderBy($order);
 
         $query = $queryUnion->toString();
 
         $connector = $masterSchema->getDatabaseConnector();
-        if ($connector === '') {
-            $connector = DatabaseConnections::$defaultConnector;
-        }
+        if ($connector === '') $connector = DatabaseConnections::$defaultConnector;
         $connection = DatabaseConnections::get($connector);
         return $connection->query($query);
     }
@@ -104,9 +98,7 @@ class RelatedKeysMergeHelper
         $query = $queryUnion->toString();
 
         $connector = $masterSchema->getDatabaseConnector();
-        if ($connector === '') {
-            $connector = DatabaseConnections::$defaultConnector;
-        }
+        if ($connector === '') $connector = DatabaseConnections::$defaultConnector;
         $connection = DatabaseConnections::get($connector);
         $response = $connection->query($query);
         return (int)$response[0]['Total'];
@@ -115,11 +107,7 @@ class RelatedKeysMergeHelper
     public static function convertRawResults(array $results): array
     {
         $r = [];
-
-        foreach ($results as $result) {
-            $r[] = Instantiator::make($result['component'], $result['id']);
-        }
-
+        foreach ($results as $result) $r[] = Instantiator::make($result['component'], $result['id']);
         return $r;
     }
 }

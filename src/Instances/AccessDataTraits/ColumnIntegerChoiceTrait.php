@@ -38,7 +38,7 @@ trait ColumnIntegerChoiceTrait
         return $value === $compared;
     }
 
-    protected function _setIntegerChoiceVal(string $fieldName, int $value = null): void
+    protected function _setIntegerChoiceVal(string $fieldName, int $value = null): static
     {
         $schema = Schema::get(static::GENERATED_TYPE);
         /** @var IntegerChoiceField $field */
@@ -54,5 +54,6 @@ trait ColumnIntegerChoiceTrait
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }

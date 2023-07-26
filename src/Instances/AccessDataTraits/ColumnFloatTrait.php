@@ -51,12 +51,13 @@ trait ColumnFloatTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _setFloatVal(string $fieldName, float $value = null): void
+    protected function _setFloatVal(string $fieldName, float $value = null): static
     {
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
     }
 }
