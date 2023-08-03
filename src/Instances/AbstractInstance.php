@@ -3,8 +3,8 @@
 namespace Lkt\Factory\Instantiator\Instances;
 
 use Exception;
-use Lkt\DatabaseConnectors\Cache\QueryCache;
-use Lkt\DatabaseConnectors\DatabaseConnector;
+use Lkt\Connectors\Cache\QueryCache;
+use Lkt\Connectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;

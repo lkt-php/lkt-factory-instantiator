@@ -2,7 +2,7 @@
 
 namespace Lkt\Factory\Instantiator;
 
-use Lkt\DatabaseConnectors\DatabaseConnections;
+use Lkt\Connectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instances\AbstractInstance;

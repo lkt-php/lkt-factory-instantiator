@@ -2,7 +2,7 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
-use Lkt\DatabaseConnectors\DatabaseConnector;
+use Lkt\Connectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
@@ -109,7 +109,7 @@ trait ColumnRelatedTrait
         /** @var RelatedField $field */
         $field = $schema->getField($column);
 
-        $where = $field->getWhere();
+        $where = (array)$field?->getWhere();
 
         /**
          * @var Query $builder

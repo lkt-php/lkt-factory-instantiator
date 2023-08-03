@@ -2,7 +2,7 @@
   "name": "lkt/factory-instantiator",
   "description": "LKT Factory Instantiator",
   "type": "library",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "require": {
     "php": ">=8.1.0",
     "ext-intl": "*",
