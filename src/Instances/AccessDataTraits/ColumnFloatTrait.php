@@ -13,7 +13,7 @@ trait ColumnFloatTrait
      * @param string $field
      * @return float
      */
-    protected function _getFloatVal(string $field) :float
+    protected function _getFloatVal(string $field): float
     {
         if (isset($this->UPDATED[$field])) {
             return $this->UPDATED[$field];
@@ -25,7 +25,7 @@ trait ColumnFloatTrait
      * @param string $fieldName
      * @return string
      */
-    protected function _getFloatFormattedVal(string $fieldName) :string
+    protected function _getFloatFormattedVal(string $fieldName): string
     {
         $formatter = NumberFormatter::getDecimalNumberFormatter();
         return $formatter->format($this->_getFloatVal($fieldName));
@@ -35,9 +35,9 @@ trait ColumnFloatTrait
      * @param string $fieldName
      * @return bool
      */
-    protected function _hasFloatVal(string $fieldName) :bool
+    protected function _hasFloatVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }

@@ -19,7 +19,7 @@ trait ColumnForeignListTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _getForeignListIds(string $fieldName) :array
+    protected function _getForeignListIds(string $fieldName): array
     {
         $schema = Schema::get(static::GENERATED_TYPE);
 
@@ -30,10 +30,10 @@ trait ColumnForeignListTrait
         $items = explode(';', trim($this->_getForeignListVal($fieldName)));
         $items = array_filter($items, function ($item) use ($allowAnonymous) {
             $t = trim($item);
-            if ($t === ''){
+            if ($t === '') {
                 return false;
             }
-            if ($allowAnonymous){
+            if ($allowAnonymous) {
                 return true;
             }
             return (int)$t > 0;
@@ -49,7 +49,7 @@ trait ColumnForeignListTrait
      * @throws SchemaNotDefinedException
      * @throws InvalidSchemaAppClassException
      */
-    protected function _getForeignListData(string $fieldName) :array
+    protected function _getForeignListData(string $fieldName): array
     {
         $schema = Schema::get(static::GENERATED_TYPE);
 
@@ -61,10 +61,10 @@ trait ColumnForeignListTrait
 
         $r = [];
 
-        foreach ($items as $item){
-            if (is_numeric($item)){
+        foreach ($items as $item) {
+            if (is_numeric($item)) {
                 $t = Instantiator::make($field->getComponent(), $item);
-                if ($t instanceof AbstractInstance && !$t->isAnonymous()){
+                if ($t instanceof AbstractInstance && !$t->isAnonymous()) {
                     $r[] = $t;
                 }
             } else {
@@ -79,7 +79,7 @@ trait ColumnForeignListTrait
      * @param string $fieldName
      * @return string
      */
-    protected function _getForeignListVal(string $fieldName) :string
+    protected function _getForeignListVal(string $fieldName): string
     {
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
@@ -91,9 +91,9 @@ trait ColumnForeignListTrait
      * @param string $fieldName
      * @return bool
      */
-    protected function _hasForeignListVal(string $fieldName) :bool
+    protected function _hasForeignListVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -108,13 +108,34 @@ trait ColumnForeignListTrait
      */
     protected function _setForeignListVal(string $fieldName, $value = null): static
     {
-        if (is_array($value)){
+        if (is_array($value)) {
             $value = implode(';', $value);
-        } elseif (!is_string($value)){
+        } elseif (!is_string($value)) {
             $value = trim($value);
         }
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
+        ], false);
+
+        $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
+    }
+
+    /**
+     * @param string $fieldName
+     * @param array $value
+     * @return $this
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _removeForeignListIds(string $fieldName, array $value = []): static
+    {
+        $r = [];
+        $current = $this->_getForeignListIds($fieldName);
+        foreach ($current as $val) if (!in_array($val, $value)) $r[] = $val;
+
+        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+            $fieldName => $r,
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();

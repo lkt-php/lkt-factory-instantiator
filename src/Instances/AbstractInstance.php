@@ -10,6 +10,7 @@ use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnConcatTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnDateTimeTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnEmailTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnEncryptTrait;
@@ -67,7 +68,8 @@ abstract class AbstractInstance
         ColumnStringChoiceTrait,
         ColumnIntegerChoiceTrait,
         ColumnEncryptTrait,
-        ColumnRelatedKeysMergeTrait;
+        ColumnRelatedKeysMergeTrait,
+        ColumnConcatTrait;
 
     protected $TYPE;
     protected array $DATA = [];

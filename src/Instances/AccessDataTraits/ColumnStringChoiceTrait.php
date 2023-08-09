@@ -9,7 +9,7 @@ use Lkt\Factory\Schemas\Schema;
 
 trait ColumnStringChoiceTrait
 {
-    protected function _getStringChoiceVal(string $fieldName) :string
+    protected function _getStringChoiceVal(string $fieldName): string
     {
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
@@ -17,22 +17,22 @@ trait ColumnStringChoiceTrait
         return trim($this->DATA[$fieldName]);
     }
 
-    protected function _hasStringChoiceVal(string $fieldName) :bool
+    protected function _hasStringChoiceVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
         return $this->DATA[$checkField] === true;
     }
 
-    protected function _stringChoiceIn(string $fieldName, array $values) :bool
+    protected function _stringChoiceIn(string $fieldName, array $values): bool
     {
         $value = $this->_getStringChoiceVal($fieldName);
         return in_array($value, $values, true);
     }
 
-    protected function _stringChoiceEqual(string $fieldName, string $compared) :bool
+    protected function _stringChoiceEqual(string $fieldName, string $compared): bool
     {
         $value = $this->_getStringChoiceVal($fieldName);
         return $value === $compared;

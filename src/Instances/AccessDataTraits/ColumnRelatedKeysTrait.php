@@ -78,7 +78,7 @@ trait ColumnRelatedKeysTrait
         $where[] = implode(' OR ', $constraints);
         $whereString = '';
 
-        if (count($where) > 0){
+        if (count($where) > 0) {
             $whereString = '(' . implode(') AND (', $where) . ')';
         }
 

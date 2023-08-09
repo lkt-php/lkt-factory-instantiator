@@ -24,7 +24,7 @@ trait ColumnRelatedTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedVal(string $type = '', $column = '', $forceRefresh = false) :array
+    protected function _getRelatedVal(string $type = '', $column = '', $forceRefresh = false): array
     {
         if (!$forceRefresh && isset($this->UPDATED_RELATED_DATA[$column])) {
             return $this->UPDATED_RELATED_DATA[$column];
@@ -117,9 +117,9 @@ trait ColumnRelatedTrait
          */
         list($builder, $connection) = Instantiator::getQueryCaller($field->getComponent());
 
-        if ($field->hasMultipleReferences()){
+        if ($field->hasMultipleReferences()) {
             $temp = [];
-            foreach ($field->getMultipleReferences() as $reference)  {
+            foreach ($field->getMultipleReferences() as $reference) {
                 $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
             }
 
@@ -131,7 +131,7 @@ trait ColumnRelatedTrait
             }
         }
         $order = $field->getOrder();
-        if (!is_array($order)){
+        if (!is_array($order)) {
             $order = [];
         }
 
@@ -179,9 +179,9 @@ trait ColumnRelatedTrait
          */
         list($builder, $connection) = Instantiator::getCustomQueryCaller($field->getComponent());
 
-        if ($field->hasMultipleReferences()){
+        if ($field->hasMultipleReferences()) {
             $temp = [];
-            foreach ($field->getMultipleReferences() as $reference)  {
+            foreach ($field->getMultipleReferences() as $reference) {
                 $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
             }
 
@@ -193,7 +193,7 @@ trait ColumnRelatedTrait
             }
         }
         $order = $field->getOrder();
-        if (!is_array($order)){
+        if (!is_array($order)) {
             $order = [];
         }
 
@@ -222,7 +222,7 @@ trait ColumnRelatedTrait
      * @param string $column
      * @return bool
      */
-    protected function _hasRelatedVal($type = '', $column = '') :bool
+    protected function _hasRelatedVal($type = '', $column = ''): bool
     {
         return count($this->_getRelatedVal($type)) > 0;
     }
@@ -243,7 +243,7 @@ trait ColumnRelatedTrait
 
         $r = [];
 
-        foreach ($data as $datum){
+        foreach ($data as $datum) {
             $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
             $instance->hydrate($datum);
             $r[] = $instance;

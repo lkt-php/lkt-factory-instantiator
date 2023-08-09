@@ -9,7 +9,7 @@ use Lkt\Factory\Schemas\Schema;
 
 trait ColumnIntegerChoiceTrait
 {
-    protected function _getIntegerChoiceVal(string $fieldName) :int
+    protected function _getIntegerChoiceVal(string $fieldName): int
     {
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
@@ -17,22 +17,22 @@ trait ColumnIntegerChoiceTrait
         return trim($this->DATA[$fieldName]);
     }
 
-    protected function _hasIntegerChoiceVal(string $fieldName) :bool
+    protected function _hasIntegerChoiceVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
         return $this->DATA[$checkField] === true;
     }
 
-    protected function _integerChoiceIn(string $fieldName, array $values) :bool
+    protected function _integerChoiceIn(string $fieldName, array $values): bool
     {
         $value = $this->_getIntegerChoiceVal($fieldName);
         return in_array($value, $values, true);
     }
 
-    protected function _integerChoiceEqual(string $fieldName, int $compared) :bool
+    protected function _integerChoiceEqual(string $fieldName, int $compared): bool
     {
         $value = $this->_getIntegerChoiceVal($fieldName);
         return $value === $compared;

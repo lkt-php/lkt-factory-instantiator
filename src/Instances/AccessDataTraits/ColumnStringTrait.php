@@ -6,7 +6,7 @@ use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 
 trait ColumnStringTrait
 {
-    protected function _getStringVal(string $fieldName) :string
+    protected function _getStringVal(string $fieldName): string
     {
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
@@ -14,9 +14,9 @@ trait ColumnStringTrait
         return trim($this->DATA[$fieldName]);
     }
 
-    protected function _hasStringVal(string $fieldName) :bool
+    protected function _hasStringVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }

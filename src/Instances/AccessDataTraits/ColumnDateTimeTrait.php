@@ -28,7 +28,7 @@ trait ColumnDateTimeTrait
      * @param string|null $format
      * @return string
      */
-    protected function _getDateTimeFormattedVal(string $fieldName, string $format = null) :string
+    protected function _getDateTimeFormattedVal(string $fieldName, string $format = null): string
     {
         if (!$this->_hasDateTimeVal($fieldName)) {
             return '';
@@ -43,7 +43,7 @@ trait ColumnDateTimeTrait
      * @param string|null $format
      * @return string
      */
-    protected function _getDateTimeFormattedIntlVal(string $fieldName, string $format = null) :string
+    protected function _getDateTimeFormattedIntlVal(string $fieldName, string $format = null): string
     {
         if (!$this->_hasDateTimeVal($fieldName)) {
             return '';
@@ -55,9 +55,9 @@ trait ColumnDateTimeTrait
      * @param string $fieldName
      * @return bool
      */
-    protected function _hasDateTimeVal(string $fieldName) :bool
+    protected function _hasDateTimeVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -73,13 +73,13 @@ trait ColumnDateTimeTrait
     protected function _setDateTimeVal(string $fieldName, $value = null): static
     {
         $raeValueToConvert = null;
-         if ($value instanceof Carbon) {
-             $raeValueToConvert = $value->format('Y-m-d H:i:s');
+        if ($value instanceof Carbon) {
+            $raeValueToConvert = $value->format('Y-m-d H:i:s');
 
-         } elseif ($value instanceof DateTime) {
-             $raeValueToConvert = $value->format('Y-m-d H:i:s');
+        } elseif ($value instanceof DateTime) {
+            $raeValueToConvert = $value->format('Y-m-d H:i:s');
 
-         } elseif (is_string($value)) {
+        } elseif (is_string($value)) {
             $raeValueToConvert = $value;
 
         } elseif (is_int($value)) {

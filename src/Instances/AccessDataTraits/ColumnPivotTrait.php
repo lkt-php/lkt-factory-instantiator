@@ -74,7 +74,7 @@ trait ColumnPivotTrait
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    protected function _getPivotVal(string $column) :array
+    protected function _getPivotVal(string $column): array
     {
         if (!isset($this->PIVOT[$column])) {
             $this->_loadPivots($column);
@@ -107,13 +107,13 @@ trait ColumnPivotTrait
         $key = getArrayFirstPosition(array_keys(array_filter($pivotSchema->getAllFields(), function (AbstractField $field) use ($auxColumn) {
             return $field->getColumn() === $auxColumn;
         })));
-        $getter = 'get'.ucfirst($key);
+        $getter = 'get' . ucfirst($key);
 
         if ($fieldPivotColumn instanceof ForeignKeyField) {
             $getter .= 'Id';
         }
 
-        $ids = array_map(function($item) use ($getter) {
+        $ids = array_map(function ($item) use ($getter) {
             return $item->{$getter}();
         }, $this->PIVOT[$column]);
 
@@ -148,7 +148,7 @@ trait ColumnPivotTrait
 
         $where = $toColumnString . ' IN (' . implode(',', $ids) . ')';
         $order = [];
-        foreach ($ids as $id){
+        foreach ($ids as $id) {
             arrayPushUnique($order, "{$toColumnString} = '{$id}' DESC");
         }
 
@@ -175,7 +175,7 @@ trait ColumnPivotTrait
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    protected function _hasPivotVal(string $column = '') :bool
+    protected function _hasPivotVal(string $column = ''): bool
     {
         return count($this->_getPivotVal($column)) > 0;
     }

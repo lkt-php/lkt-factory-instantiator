@@ -16,7 +16,7 @@ trait ColumnRelatedKeysMergeTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedKeysMergeVal(string $column = '', bool $forceRefresh = false) :array
+    protected function _getRelatedKeysMergeVal(string $column = '', bool $forceRefresh = false): array
     {
         if (!$forceRefresh && isset($this->UPDATED_RELATED_DATA[$column])) {
             return $this->UPDATED_RELATED_DATA[$column];
@@ -38,7 +38,7 @@ trait ColumnRelatedKeysMergeTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedKeysMergeRaw(string $column = '', bool $forceRefresh = false) :array
+    protected function _getRelatedKeysMergeRaw(string $column = '', bool $forceRefresh = false): array
     {
         $key = $column . 'Raw';
 
@@ -57,7 +57,7 @@ trait ColumnRelatedKeysMergeTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _hasRelatedKeysMergeVal(string $column = '') :bool
+    protected function _hasRelatedKeysMergeVal(string $column = ''): bool
     {
         return count($this->_getRelatedKeysMergeVal($column)) > 0;
     }
@@ -66,7 +66,7 @@ trait ColumnRelatedKeysMergeTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _hasRelatedKeysMergeRaw(string $column = '') :bool
+    protected function _hasRelatedKeysMergeRaw(string $column = ''): bool
     {
         return count($this->_getRelatedKeysMergeRaw($column)) > 0;
     }

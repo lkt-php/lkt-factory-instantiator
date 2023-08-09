@@ -29,7 +29,7 @@ trait ColumnJsonTrait
         /** @var JSONField $field */
         $field = $schema->getField($fieldName);
 
-        if ($field->isAssoc()){
+        if ($field->isAssoc()) {
             /** @var array $r */
             return $r;
         }
@@ -42,9 +42,9 @@ trait ColumnJsonTrait
      * @param string $fieldName
      * @return bool
      */
-    protected function _hasJsonVal(string $fieldName) :bool
+    protected function _hasJsonVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -59,10 +59,10 @@ trait ColumnJsonTrait
      */
     protected function _setJsonVal(string $fieldName, $value = null): static
     {
-        if (is_object($value)){
+        if (is_object($value)) {
             $value = json_decode(json_encode($value), true);
 
-        } elseif (!is_array($value)){
+        } elseif (!is_array($value)) {
             $value = [];
         }
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [

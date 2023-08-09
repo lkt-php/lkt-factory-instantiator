@@ -14,7 +14,7 @@ trait ColumnColorTrait
      * @param string $fieldName
      * @return string
      */
-    protected function _getColorVal(string $fieldName) :string
+    protected function _getColorVal(string $fieldName): string
     {
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
@@ -27,7 +27,7 @@ trait ColumnColorTrait
      * @param float|null $opacity
      * @return array
      */
-    protected function _getColorRgbVal(string $fieldName, float $opacity = null) :array
+    protected function _getColorRgbVal(string $fieldName, float $opacity = null): array
     {
         $r = trim($this->DATA[$fieldName]);
         if (isset($this->UPDATED[$fieldName])) {
@@ -47,7 +47,7 @@ trait ColumnColorTrait
      * @param float|null $opacity
      * @return string
      */
-    protected function _getColorRgbStringVal(string $fieldName, float $opacity = null) :string
+    protected function _getColorRgbStringVal(string $fieldName, float $opacity = null): string
     {
         $color = $this->_getColorRgbVal($fieldName, $opacity);
         $base = 'rgb';
@@ -64,9 +64,9 @@ trait ColumnColorTrait
      * @param string $fieldName
      * @return bool
      */
-    protected function _hasColorVal(string $fieldName) :bool
+    protected function _hasColorVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }

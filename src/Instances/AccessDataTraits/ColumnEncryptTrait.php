@@ -8,7 +8,7 @@ use Lkt\Factory\Schemas\Schema;
 
 trait ColumnEncryptTrait
 {
-    protected function _getEncryptVal(string $fieldName) :string
+    protected function _getEncryptVal(string $fieldName): string
     {
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
@@ -16,7 +16,7 @@ trait ColumnEncryptTrait
         return trim($this->DATA[$fieldName]);
     }
 
-    protected function _getDecryptedVal(string $fieldName) :string
+    protected function _getDecryptedVal(string $fieldName): string
     {
         if (isset($this->DECRYPT_UPDATED[$fieldName])) {
             return $this->DECRYPT_UPDATED[$fieldName];
@@ -41,9 +41,9 @@ trait ColumnEncryptTrait
         return trim($this->DECRYPT[$fieldName]);
     }
 
-    protected function _hasEncryptVal(string $fieldName) :bool
+    protected function _hasEncryptVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }

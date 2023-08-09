@@ -30,9 +30,9 @@ trait ColumnFileTrait
      * @param string $fieldName
      * @return bool
      */
-    protected function _hasFileVal(string $fieldName) :bool
+    protected function _hasFileVal(string $fieldName): bool
     {
-        $checkField = 'has'.ucfirst($fieldName);
+        $checkField = 'has' . ucfirst($fieldName);
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
@@ -78,7 +78,7 @@ trait ColumnFileTrait
         $field = $schema->getField($fieldName);
 
         if ($field->hasPublicPath()) {
-            return $field->getPublicPath() . '/'.$this->_getFileName($fieldName);
+            return $field->getPublicPath() . '/' . $this->_getFileName($fieldName);
         }
         return '';
     }
