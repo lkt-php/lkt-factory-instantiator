@@ -82,6 +82,8 @@ abstract class AbstractInstance
     protected array $PENDING_UPDATE_RELATED_DATA = [];
     protected array $PAGES = [];
     protected array $PAGES_TOTAL = [];
+
+    /** @deprecated  */
     const GENERATED_TYPE = '';
     const COMPONENT = '';
 
@@ -94,6 +96,9 @@ abstract class AbstractInstance
      */
     public function __construct(string $component = null, array $initialData = [])
     {
+        if (!$component && static::COMPONENT) {
+            $component = static::COMPONENT;
+        }
         if (!$component && static::GENERATED_TYPE) {
             $component = static::GENERATED_TYPE;
         }

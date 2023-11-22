@@ -65,12 +65,10 @@ trait ColumnDateTimeTrait
     }
 
     /**
-     * @param string $fieldName
-     * @param Carbon|DateTime|string|int|null $value
      * @throws \Lkt\Factory\Schemas\Exceptions\InvalidComponentException
      * @throws \Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException
      */
-    protected function _setDateTimeVal(string $fieldName, $value = null): static
+    protected function _setDateTimeVal(string $fieldName, Carbon|DateTime|int|string|null $value = null): static
     {
         $raeValueToConvert = null;
         if ($value instanceof Carbon) {

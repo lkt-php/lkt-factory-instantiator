@@ -103,4 +103,15 @@ trait ColumnFileTrait
         $file = $this->_getFileVal($fieldName);
         $file->directory->change($src);
     }
+
+    /**
+     * @param string $fieldName
+     * @return FileField|null
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getFileFieldConfig(string $fieldName): ?FileField
+    {
+        $schema = Schema::get(static::COMPONENT);
+        return $schema->getFileField($fieldName);
+    }
 }

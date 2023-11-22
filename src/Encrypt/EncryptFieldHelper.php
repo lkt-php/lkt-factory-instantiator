@@ -19,7 +19,7 @@ class EncryptFieldHelper
                 if ($field->isHashMode()) {
                     $value = hash_hmac('sha256', $value . $secureSeed, $secureSeed);
                 } else {
-                    $value = EncryptFieldHelper::encryptSHA256($value, $secureSeed);
+                    $value = static::encryptSHA256($value, $secureSeed);
                 }
             }
         }
@@ -27,28 +27,17 @@ class EncryptFieldHelper
         return $value;
     }
 
-    public static function encryptSHA256(string $value, string $secureSeed): string
+    public static function encryptSHA256(string $value, string $secureSeed, int $iv_size = 32): string
     {
-        $iv_size = 32; // 256 bits
-
-        return openssl_encrypt(
-            static::pkcs7_pad($value, $iv_size),
-            'AES-256-CBC',
-            $secureSeed
-        );
-    }
-    public static function decryptSHA256(string $value, string $secureSeed): string
-    {
-        $iv_size = 32; // 256 bits
-
-        return openssl_decrypt(
-            static::pkcs7_pad($value, $iv_size),
-            'AES-256-CBC',
-            $secureSeed
-        );
+        return openssl_encrypt(static::pkcs7_pad($value, $iv_size), 'AES-256-CBC', $secureSeed);
     }
 
-    private static function pkcs7_pad($data, $size)
+    public static function decryptSHA256(string $value, string $secureSeed, int $iv_size = 32): string
+    {
+        return openssl_decrypt(static::pkcs7_pad($value, $iv_size), 'AES-256-CBC', $secureSeed);
+    }
+
+    private static function pkcs7_pad($data, $size): string
     {
         $length = $size - strlen($data) % $size;
         return $data . str_repeat(chr($length), $length);
