@@ -83,7 +83,7 @@ abstract class AbstractInstance
     protected array $PAGES = [];
     protected array $PAGES_TOTAL = [];
 
-    /** @deprecated  */
+    /** @deprecated */
     const GENERATED_TYPE = '';
     const COMPONENT = '';
 
@@ -119,7 +119,21 @@ abstract class AbstractInstance
     public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): static
     {
         if (!$component) $component = static::GENERATED_TYPE;
-        if (!$id || !$component) return new static();
+        if (!$id || !$component) {
+            $r = new static();
+
+            $schema = Schema::get($component);
+            $fields = $schema->getChoiceFieldsWithDefaultValue();
+
+            if (count($fields)) {
+                foreach ($fields as $field) {
+                    $setter = $field->getSetter();
+                    $r->{$setter}($field->getEmptyDefault());
+                }
+            }
+
+            return $r;
+        }
 
         $code = Instantiator::getInstanceCode($component, $id);
 
@@ -178,10 +192,10 @@ abstract class AbstractInstance
     }
 
     /**
-     * @deprecated
      * @throws InvalidComponentException
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
+     * @deprecated
      */
     public function convertToComponent(string $component = ''): ?static
     {
