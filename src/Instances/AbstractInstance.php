@@ -31,6 +31,7 @@ use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
 use Lkt\Factory\Schemas\Fields\EmailField;
@@ -41,6 +42,7 @@ use Lkt\Factory\Schemas\Fields\IntegerChoiceField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\JSONField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
+use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
 use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Schema;
@@ -487,7 +489,7 @@ abstract class AbstractInstance
 
         foreach ($params as $param => $value) {
 
-            $field = $schema->getField($param);
+            $field = $schema->getFeedField($param);
 
             if ($field instanceof StringChoiceField) {
                 $instance->_setStringChoiceVal($param, clearInput($value));
@@ -512,9 +514,62 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof ColorField) {
                 $instance->_setColorVal($param, $value);
+
+            } elseif ($field instanceof RelatedKeysField) {
+                $instance->_setRelatedKeysValWithData($param, $value);
             }
         }
 
         return $instance;
+    }
+
+
+    /**
+     * @param AbstractField[] $fields
+     * @return array
+     */
+    public function readFields(array $fields = []): array
+    {
+        $r = [];
+        foreach ($fields as $field) {
+            $getter = $field->getGetterForPrimitiveValue();
+            $r[$field->getName()] = $this->{$getter}();
+        }
+        return $r;
+    }
+
+
+    /**
+     * @param AbstractField[] $fields
+     * @return array
+     */
+    public function readAsRelated(): array
+    {
+        $schema = Schema::get(static::COMPONENT);
+
+        $r = [];
+
+        // Option value
+        $field = $schema->getRelatedModeValueField();
+        if ($field instanceof AbstractField) {
+            $getter = $field->getGetterForPrimitiveValue();
+            $r['value'] = $this->{$getter}();
+        }
+
+        // Option label
+        $field = $schema->getRelatedModeLabelField();
+        if ($field instanceof AbstractField) {
+            $getter = $field->getGetterForPrimitiveValue();
+            $r['label'] = $this->{$getter}();
+        }
+
+        // Additional data
+        $fields = $schema->getRelatedModeAdditionalFields();
+        foreach ($fields as $field) {
+            $getter = $field->getGetterForPrimitiveValue();
+            $r[$field->getName()] = $this->{$getter}();
+        }
+
+        return $r;
     }
 }

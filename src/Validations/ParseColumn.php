@@ -25,6 +25,7 @@ class ParseColumn
      */
     public static function stringDatum($value): string
     {
+        if (is_null($value)) $value = '';
         return trim($value);
     }
 
