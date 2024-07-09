@@ -99,9 +99,7 @@ trait ColumnRelatedTrait
      */
     protected function _getRelatedQueryBuilder($type = '', $column = '', $forceRefresh = false)
     {
-        if (!$type) {
-            return null;
-        }
+        if (!$type) return null;
 
         $schema = Schema::get(static::GENERATED_TYPE);
 
@@ -127,7 +125,12 @@ trait ColumnRelatedTrait
 
         } else {
             if ($this->DATA[$idColumn]) {
-                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
+                $relatedSchema = Schema::get($field->getComponent());
+                $relatedField = $relatedSchema->getField($field->getColumn());
+                if ($relatedField) {
+                    $builder->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                }
+//                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
             }
         }
         $order = $field->getOrder();
@@ -234,21 +237,38 @@ trait ColumnRelatedTrait
      */
     protected function _setRelatedValWithData($type = '', $column = '', $data = [])
     {
-        $this->PENDING_UPDATE_RELATED_DATA[$column] = $data;
+        $ownSchema = Schema::get(static::COMPONENT);
+        $ownField = $ownSchema->getRelatedField($column);
+
+        if ($type === '') {
+            $type = $ownField->getComponent();
+        }
 
         $schema = Schema::get($type);
         $relatedIdColumn = $schema->getIdColumn();
+        if (count($relatedIdColumn) === 1) $relatedIdColumn = reset($relatedIdColumn);
+        $relatedForeignKeyColumn = $schema->getField($ownField->getColumn());
+        $relatedForeignKeyKey = $relatedForeignKeyColumn->getName();
 
         $relatedClass = $schema->getInstanceSettings()->getAppClass();
 
         $r = [];
 
-        foreach ($data as $datum) {
+        foreach ($data as &$datum) {
+            if (!$datum[$relatedIdColumn]) {
+                $datum[$relatedForeignKeyKey] = $this->getIdColumnValue();
+
+                foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
+                    if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
+                }
+            }
+
             $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
             $instance->hydrate($datum);
             $r[] = $instance;
         }
 
+        $this->PENDING_UPDATE_RELATED_DATA[$column] = $data;
         $this->UPDATED_RELATED_DATA[$column] = $r;
         return $this;
     }

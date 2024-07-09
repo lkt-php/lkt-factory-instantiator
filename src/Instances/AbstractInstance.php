@@ -273,10 +273,6 @@ abstract class AbstractInstance
                 $relatedIdColumnGetter = 'get' . ucfirst($relatedIdColumn);
                 $relatedClass = $relatedSchema->getInstanceSettings()->getAppClass();
 
-                $create = $relatedSchema->getCreateHandler();
-                $update = $relatedSchema->getUpdateHandler();
-                $delete = $relatedSchema->getDeleteHandler();
-
                 // Check which items must be deleted
                 $currentItems = $this->_getRelatedVal($relatedComponent, $column, true);
                 $currentIds = [];
@@ -298,18 +294,29 @@ abstract class AbstractInstance
 
                 // Delete
                 foreach ($diff['deleted'] as $deletedId) {
-                    $delete::getInstance($relatedClass::getInstance($deletedId));
+                    $ins = $relatedClass::getInstance($deletedId);
+                    $ins->delete();
                 }
+
+                $relatedForeignKeyColumn = $relatedSchema->getField($field->getColumn());
+                $relatedForeignKeyKey = $relatedForeignKeyColumn->getName();
 
 
                 // Update or create
                 foreach ($data as $datum) {
+                    if (!$datum[$relatedForeignKeyKey]) {
+                        $datum[$relatedForeignKeyKey] = $this->getIdColumnValue();
+                    }
+
                     if ($datum[$relatedIdColumn] > 0) {
-                        $instance = $relatedClass::getInstance($datum[$relatedIdColumn]);
-                        $update::getInstance($instance, $datum);
+                        $ins = $relatedClass::getInstance($datum[$relatedIdColumn]);
+                        $ins::feedInstance($ins, $datum);
+                        $ins->save();
 
                     } else {
-                        $create::getInstance($datum);
+                        $ins = $relatedClass::getInstance();
+                        $ins::feedInstance($ins, $datum);
+                        $ins->save();
                     }
                 }
             }
@@ -517,6 +524,9 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof RelatedKeysField) {
                 $instance->_setRelatedKeysValWithData($param, $value);
+
+            }elseif ($field instanceof RelatedField) {
+                $instance->_setRelatedValWithData('', $param, $value);
             }
         }
 
@@ -532,8 +542,18 @@ abstract class AbstractInstance
     {
         $r = [];
         foreach ($fields as $field) {
-            $getter = $field->getGetterForPrimitiveValue();
-            $r[$field->getName()] = $this->{$getter}();
+            if ($field instanceof RelatedField) {
+                $getter = $field->getGetterForPrimitiveValue();
+                $items = $this->{$getter}();
+                $t = [];
+                foreach ($items as $item) {
+                    $t[] = $item->readAsRelated();
+                }
+                $r[$field->getName()] = $t;
+            } else {
+                $getter = $field->getGetterForPrimitiveValue();
+                $r[$field->getName()] = $this->{$getter}();
+            }
         }
         return $r;
     }
