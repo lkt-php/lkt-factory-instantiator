@@ -26,12 +26,18 @@ class ValidateFieldValue
      */
     public static function validate(AbstractField $field, $value = null): bool
     {
-        if ($field instanceof HTMLField) return trim($value) !== '';
+        if ($field instanceof HTMLField) {
+            if ($value === null) return false;
+            return trim($value) !== '';
+        }
 
         if ($field instanceof StringField
             || $field instanceof EmailField
             || $field instanceof ColorField
-            || $field instanceof ForeignKeysField) return trim($value) !== '';
+            || $field instanceof ForeignKeysField) {
+            if ($value === null) return false;
+            return trim($value) !== '';
+        }
 
         if ($field instanceof BooleanField) return (bool)$value === true;
 

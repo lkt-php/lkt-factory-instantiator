@@ -585,9 +585,9 @@ abstract class AbstractInstance
 
         // Additional data
         $fields = $schema->getRelatedModeAdditionalFields();
-        foreach ($fields as $field) {
+        foreach ($fields as $key => $field) {
             $getter = $field->getGetterForPrimitiveValue();
-            $r[$field->getName()] = $this->{$getter}();
+            $r[$key] = $this->{$getter}();
         }
 
         return $r;

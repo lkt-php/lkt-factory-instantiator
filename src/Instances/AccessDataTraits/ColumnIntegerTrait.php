@@ -11,7 +11,10 @@ trait ColumnIntegerTrait
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
         }
-        return (int)$this->DATA[$fieldName];
+        if (isset($this->DATA[$fieldName])) {
+            return (int)$this->DATA[$fieldName];
+        }
+        return 0;
     }
 
     protected function _hasIntegerVal(string $fieldName): bool
@@ -20,7 +23,10 @@ trait ColumnIntegerTrait
         if (isset($this->UPDATED[$checkField])) {
             return $this->UPDATED[$checkField];
         }
-        return $this->DATA[$checkField] === true;
+        if (isset($this->DATA[$checkField])) {
+            return $this->DATA[$checkField] === true;
+        }
+        return false;
     }
 
     protected function _setIntegerVal(string $fieldName, int $value = null): static

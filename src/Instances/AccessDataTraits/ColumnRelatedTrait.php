@@ -7,7 +7,9 @@ use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
+use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\Where;
@@ -94,63 +96,25 @@ trait ColumnRelatedTrait
     }
 
     /**
-     * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
     protected function _getRelatedQueryBuilder($type = '', $column = '', $forceRefresh = false)
     {
         if (!$type) return null;
 
-        $schema = Schema::get(static::GENERATED_TYPE);
-
-        $idColumn = $schema->getIdString();
-        /** @var RelatedField $field */
-        $field = $schema->getField($column);
-
-        $where = (array)$field?->getWhere();
+        $schema = Schema::get(static::COMPONENT);
+        $field = $schema->getRelatedField($column);
 
         /**
          * @var Query $builder
          * @var DatabaseConnector $connection
          */
-        list($builder, $connection) = Instantiator::getQueryCaller($field->getComponent());
+        list($builder) = Instantiator::getQueryCaller($field->getComponent());
 
-        if ($field->hasMultipleReferences()) {
-            $temp = [];
-            foreach ($field->getMultipleReferences() as $reference) {
-                $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
-            }
-
-            $where[] = '(' . implodeWithOR($temp) . ')';
-
-        } else {
-            if ($this->DATA[$idColumn]) {
-                $relatedSchema = Schema::get($field->getComponent());
-                $relatedField = $relatedSchema->getField($field->getColumn());
-                if ($relatedField) {
-                    $builder->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
-                }
-//                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
-            }
-        }
-        $order = $field->getOrder();
-        if (!is_array($order)) {
-            $order = [];
-        }
-
-        $builder->andRaw(implode(' AND ', $where));
-        $builder->orderBy(implode(',', $order));
-        $builder->setForceRefresh($forceRefresh);
-
-        if ($field->isSingleMode()) {
-            $builder->pagination(1, 1);
-        }
-
-        return $builder;
+        return $this->_prepareQuery($builder, $schema, $field, $forceRefresh);
     }
 
     /**
-     * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
     protected function _getRelatedQueryCaller($type = '', $column = '', $forceRefresh = false)
@@ -159,56 +123,61 @@ trait ColumnRelatedTrait
     }
 
     /**
-     * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
     protected function _getRelatedCustomQueryBuilder($type = '', $column = '', $forceRefresh = false)
     {
-        if (!$type) {
-            return null;
-        }
-
-        $schema = Schema::get(static::GENERATED_TYPE);
-
-        $idColumn = $schema->getIdString();
-        /** @var RelatedField $field */
-        $field = $schema->getField($column);
-
-        $where = $field->getWhere();
+        $schema = Schema::get(static::COMPONENT);
+        $field = $schema->getRelatedField($column);
 
         /**
          * @var Query $builder
          * @var DatabaseConnector $connection
          */
-        list($builder, $connection) = Instantiator::getCustomQueryCaller($field->getComponent());
+        list($builder) = Instantiator::getCustomQueryCaller($field->getComponent());
+
+        return $this->_prepareQuery($builder, $schema, $field, $forceRefresh);
+    }
+
+    protected function _prepareQuery(Query $query, Schema $schema, RelatedField $field, $forceRefresh = false)
+    {
+        $idColumn = $schema->getIdString();
+        $relatedSchema = Schema::get($field->getComponent());
+
+        $where = (array)$field?->getWhere();
 
         if ($field->hasMultipleReferences()) {
-            $temp = [];
             foreach ($field->getMultipleReferences() as $reference) {
-                $temp[] = $connection->makeUpdateParams([$reference => $this->DATA[$idColumn]]);
-            }
+                $relatedField = $relatedSchema->getField($reference);
+                if ($relatedField instanceof IntegerField) {
+                    $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
 
-            $where[] = '(' . implodeWithOR($temp) . ')';
+                } elseif ($relatedField instanceof StringField) {
+                    $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                }
+            }
 
         } else {
             if ($this->DATA[$idColumn]) {
-                $where[] = $connection->makeUpdateParams([$field->getColumn() => $this->DATA[$idColumn]]);
+                $relatedField = $relatedSchema->getField($field->getColumn());
+                if ($relatedField instanceof IntegerField) {
+                    $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+
+                } elseif ($relatedField instanceof StringField) {
+                    $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                }
             }
         }
         $order = $field->getOrder();
-        if (!is_array($order)) {
-            $order = [];
-        }
+        if (!is_array($order)) $order = [];
 
-        $builder->andRaw(implode(' AND ', $where));
-        $builder->orderBy(implode(',', $order));
-        $builder->setForceRefresh($forceRefresh);
+        $query->andRaw(implode(' AND ', $where));
+        $query->orderBy(implode(',', $order));
+        $query->setForceRefresh($forceRefresh);
 
-        if ($field->isSingleMode()) {
-            $builder->pagination(1, 1);
-        }
+        if ($field->isSingleMode()) $query->pagination(1, 1);
 
-        return $builder;
+        return $query;
     }
 
     /**
