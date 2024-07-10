@@ -36,6 +36,7 @@ use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
 use Lkt\Factory\Schemas\Fields\EmailField;
 use Lkt\Factory\Schemas\Fields\FloatField;
+use Lkt\Factory\Schemas\Fields\ForeignKeysField;
 use Lkt\Factory\Schemas\Fields\HTMLField;
 use Lkt\Factory\Schemas\Fields\IdField;
 use Lkt\Factory\Schemas\Fields\IntegerChoiceField;
@@ -260,6 +261,8 @@ abstract class AbstractInstance
             }
         }
 
+        $hasToReUpdate = false;
+
         if (count($this->PENDING_UPDATE_RELATED_DATA) > 0) {
             foreach ($this->PENDING_UPDATE_RELATED_DATA as $column => $data) {
 
@@ -273,8 +276,21 @@ abstract class AbstractInstance
                 $relatedIdColumnGetter = 'get' . ucfirst($relatedIdColumn);
                 $relatedClass = $relatedSchema->getInstanceSettings()->getAppClass();
 
+                $relatedMode = false;
+                $foreignKeysMode = false;
+
+                $foreignKeysIds = [];
+
                 // Check which items must be deleted
-                $currentItems = $this->_getRelatedVal($relatedComponent, $column, true);
+                if ($field instanceof RelatedField) {
+                    $relatedMode = true;
+                    $currentItems = $this->_getRelatedVal($relatedComponent, $column, true);
+
+                } elseif ($field instanceof ForeignKeysField) {
+                    $foreignKeysMode = true;
+                    $currentItems = $this->_getForeignListData($column);
+                }
+
                 $currentIds = [];
                 foreach ($currentItems as $currentItem) {
                     $idAux = (int)$currentItem->{$relatedIdColumnGetter}();
@@ -298,13 +314,15 @@ abstract class AbstractInstance
                     $ins->delete();
                 }
 
-                $relatedForeignKeyColumn = $relatedSchema->getField($field->getColumn());
-                $relatedForeignKeyKey = $relatedForeignKeyColumn->getName();
+                if ($relatedMode){
+                    $relatedForeignKeyColumn = $relatedSchema->getField($field->getColumn());
+                    $relatedForeignKeyKey = $relatedForeignKeyColumn->getName();
+                }
 
 
                 // Update or create
                 foreach ($data as $datum) {
-                    if (!$datum[$relatedForeignKeyKey]) {
+                    if ($relatedMode && !$datum[$relatedForeignKeyKey]) {
                         $datum[$relatedForeignKeyKey] = $this->getIdColumnValue();
                     }
 
@@ -313,14 +331,28 @@ abstract class AbstractInstance
                         $ins::feedInstance($ins, $datum);
                         $ins->save();
 
+                        if ($foreignKeysMode) $foreignKeysIds[] = $ins->getId();
+
                     } else {
                         $ins = $relatedClass::getInstance();
                         $ins::feedInstance($ins, $datum);
                         $ins->save();
+
+                        if ($foreignKeysMode) $foreignKeysIds[] = $ins->getId();
                     }
+                }
+
+                if ($foreignKeysMode && count($foreignKeysIds) > 0) {
+                    $setter = 'set'. ucfirst($field->getName());
+                    $this->{$setter}($foreignKeysIds);
+                    $hasToReUpdate = true;
                 }
             }
             $this->PENDING_UPDATE_RELATED_DATA = [];
+        }
+
+        if ($hasToReUpdate) {
+            $this->save();
         }
 
         if ($reload) {
@@ -525,8 +557,14 @@ abstract class AbstractInstance
             } elseif ($field instanceof RelatedKeysField) {
                 $instance->_setRelatedKeysValWithData($param, $value);
 
-            }elseif ($field instanceof RelatedField) {
+            } elseif ($field instanceof RelatedField) {
                 $instance->_setRelatedValWithData('', $param, $value);
+
+            } elseif ($field instanceof ForeignKeysField) {
+                $instance->_setForeignListWithData($param, $value);
+
+                //@todo: if not embed data
+                //$instance->_setForeignListVal($param, $value);
             }
         }
 
@@ -550,6 +588,17 @@ abstract class AbstractInstance
                     $t[] = $item->readAsRelated();
                 }
                 $r[$field->getName()] = $t;
+
+            } elseif ($field instanceof ForeignKeysField) {
+                $getter = $field->getGetterForData();
+                $items = $this->{$getter}();
+                if (!is_array($items)) $items = [];
+                $t = [];
+                foreach ($items as $item) {
+                    $t[] = $item->readAsRelated();
+                }
+                $r[$field->getName()] = $t;
+
             } else {
                 $getter = $field->getGetterForPrimitiveValue();
                 $r[$field->getName()] = $this->{$getter}();
@@ -585,10 +634,7 @@ abstract class AbstractInstance
 
         // Additional data
         $fields = $schema->getRelatedModeAdditionalFields();
-        foreach ($fields as $key => $field) {
-            $getter = $field->getGetterForPrimitiveValue();
-            $r[$key] = $this->{$getter}();
-        }
+        $r = [...$r, ...$this->readFields($fields)];
 
         return $r;
     }

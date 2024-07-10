@@ -3,6 +3,7 @@
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Instantiator\Helpers\UpdatedRelatedDataProcessor;
 use Lkt\Factory\Instantiator\Instances\AbstractInstance;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
@@ -118,6 +119,20 @@ trait ColumnForeignListTrait
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
+    }
+
+    protected function _setForeignListWithData(string $fieldName, array $data = []): static
+    {
+        $dataProcessor = new UpdatedRelatedDataProcessor(
+            Schema::get(static::COMPONENT),
+            $fieldName,
+            $data
+        );
+        $dataProcessor->processRelatedField();
+
+        $this->PENDING_UPDATE_RELATED_DATA[$fieldName] = $dataProcessor->pendingUpdateData;
+        $this->UPDATED_RELATED_DATA[$fieldName] = $dataProcessor->updatedData;
         return $this;
     }
 
