@@ -591,6 +591,7 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof ForeignKeysField) {
                 $getter = $field->getGetterForData();
+                $getterIds = $field->getGetterForPrimitiveValue();
                 $items = $this->{$getter}();
                 if (!is_array($items)) $items = [];
                 $t = [];
@@ -598,6 +599,7 @@ abstract class AbstractInstance
                     $t[] = $item->readAsRelated();
                 }
                 $r[$field->getName()] = $t;
+                $r[$field->getName().'Ids'] = $this->{$getterIds}();;
 
             } else {
                 $getter = $field->getGetterForPrimitiveValue();
