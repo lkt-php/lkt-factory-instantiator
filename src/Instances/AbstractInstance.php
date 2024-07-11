@@ -42,6 +42,7 @@ use Lkt\Factory\Schemas\Fields\IdField;
 use Lkt\Factory\Schemas\Fields\IntegerChoiceField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\JSONField;
+use Lkt\Factory\Schemas\Fields\MethodGetterField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
@@ -528,7 +529,7 @@ abstract class AbstractInstance
 
         foreach ($params as $param => $value) {
 
-            $field = $schema->getFeedField($param);
+            $field = $schema->getField($param);
 
             if ($field instanceof StringChoiceField) {
                 $instance->_setStringChoiceVal($param, clearInput($value));
@@ -561,10 +562,12 @@ abstract class AbstractInstance
                 $instance->_setRelatedValWithData('', $param, $value);
 
             } elseif ($field instanceof ForeignKeysField) {
-                $instance->_setForeignListWithData($param, $value);
+                if ($field->keyIsIds($param)) {
+                    $instance->_setForeignListVal($field->getName(), $value);
 
-                //@todo: if not embed data
-                //$instance->_setForeignListVal($param, $value);
+                } else {
+                    $instance->_setForeignListWithData($param, $value);
+                }
             }
         }
 
@@ -600,6 +603,10 @@ abstract class AbstractInstance
                 }
                 $r[$field->getName()] = $t;
                 $r[$field->getName().'Ids'] = $this->{$getterIds}();;
+
+            } elseif ($field instanceof MethodGetterField) {
+                $getter = $field->getName();
+                $r[$field->getColumn()] = $this->{$getter}();
 
             } else {
                 $getter = $field->getGetterForPrimitiveValue();
