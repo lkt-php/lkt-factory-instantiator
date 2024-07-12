@@ -48,6 +48,7 @@ use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
 use Lkt\Factory\Schemas\Fields\StringField;
+use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Query;
 use function Lkt\Tools\Arrays\compareArrays;
@@ -228,6 +229,15 @@ abstract class AbstractInstance
          * @var Query $queryBuilder
          */
         list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        if (!$isUpdate) {
+            $fieldsWithDefaultValue = $schema->getFieldsWithDefaultValue();
+            foreach ($fieldsWithDefaultValue as $fieldWithDefaultValue) {
+                $defaultValue = $fieldWithDefaultValue->getDefaultValue();
+                $setter = $fieldWithDefaultValue->getSetter();
+                $this->{$setter}($defaultValue);
+            }
+        }
+
         $parsed = $connection->prepareDataToStore($schema, $this->UPDATED);
 
         $origIdColumn = $schema->getIdColumn();
@@ -627,6 +637,16 @@ abstract class AbstractInstance
             } elseif ($field instanceof MethodGetterField) {
                 $getter = $field->getName();
                 $r[$field->getColumn()] = $this->{$getter}();
+
+            } elseif ($field instanceof DateTimeField || $field instanceof UnixTimeStampField) {
+                $getter = $field->getGetterForPrimitiveValue();
+                $format = $field->getDefaultReadFormat();
+                if ($format !== '') {
+                    $r[$field->getName()] = $this->{$getter.'Formatted'}($format);
+
+                } else {
+                    $r[$field->getName()] = $this->{$getter}();
+                }
 
             } else {
                 $getter = $field->getGetterForPrimitiveValue();
