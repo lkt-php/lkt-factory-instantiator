@@ -32,6 +32,7 @@ use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
+use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
 use Lkt\Factory\Schemas\Fields\EmailField;
@@ -561,6 +562,9 @@ abstract class AbstractInstance
             } elseif ($field instanceof RelatedField) {
                 $instance->_setRelatedValWithData('', $param, $value);
 
+            } elseif ($field instanceof BooleanField) {
+                $instance->_setBooleanVal($param, $value);
+
             } elseif ($field instanceof ForeignKeysField) {
                 if ($field->keyIsIds($param)) {
                     $instance->_setForeignListVal($field->getName(), $value);
@@ -572,6 +576,13 @@ abstract class AbstractInstance
         }
 
         return $instance;
+    }
+
+
+    public function readViewFields(string $view): array
+    {
+        $schema = Schema::get(static::COMPONENT);
+        return $this->readFields($schema->getViewFields($view));
     }
 
 
