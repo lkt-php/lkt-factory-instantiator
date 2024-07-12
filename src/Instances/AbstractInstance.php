@@ -230,37 +230,42 @@ abstract class AbstractInstance
         list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
         $parsed = $connection->prepareDataToStore($schema, $this->UPDATED);
 
-        $queryBuilder->updateData($parsed);
-
         $origIdColumn = $schema->getIdColumn();
         $origIdColumn = $origIdColumn[0];
 
-        if ($isUpdate) {
-            $idColumn = $schema->getField($origIdColumn);
-            $idColumn = $idColumn->getColumn();
-            $queryBuilder->andIntegerEqual($idColumn, $this->DATA[$origIdColumn]);
-            $query = $connection->getUpdateQuery($queryBuilder);
-        } else {
-            $query = $connection->getInsertQuery($queryBuilder);
+        $id = 0;
+
+        if (count($this->UPDATED) > 0) {
+
+            $queryBuilder->updateData($parsed);
+
+            if ($isUpdate) {
+                $idColumn = $schema->getField($origIdColumn);
+                $idColumn = $idColumn->getColumn();
+                $queryBuilder->andIntegerEqual($idColumn, $this->DATA[$origIdColumn]);
+                $query = $connection->getUpdateQuery($queryBuilder);
+            } else {
+                $query = $connection->getInsertQuery($queryBuilder);
+            }
+
+            $queryResponse = $connection->query($query);
+
+            if ($queryResponse !== false) {
+                foreach ($this->UPDATED as $k => $v) {
+                    $this->DATA[$k] = $v;
+                    unset($this->UPDATED[$k]);
+                }
+            }
+
+            $id = (int)$connection->getLastInsertedId();
+            $reload = true;
         }
-
-        $queryResponse = $connection->query($query);
-
-        $id = (int)$connection->getLastInsertedId();
-        $reload = true;
 
         if ($id > 0 && (!isset($this->DATA[$origIdColumn]) || !$this->DATA[$origIdColumn])) {
             $this->DATA[$origIdColumn] = $id;
 
         } elseif ($this->DATA[$origIdColumn] > 0) {
             $id = $this->DATA[$origIdColumn];
-        }
-
-        if ($queryResponse !== false) {
-            foreach ($this->UPDATED as $k => $v) {
-                $this->DATA[$k] = $v;
-                unset($this->UPDATED[$k]);
-            }
         }
 
         $hasToReUpdate = false;
@@ -311,9 +316,11 @@ abstract class AbstractInstance
                 $diff = compareArrays($currentIds, $updatedIds);
 
                 // Delete
-                foreach ($diff['deleted'] as $deletedId) {
-                    $ins = $relatedClass::getInstance($deletedId);
-                    $ins->delete();
+                if (method_exists($field, 'hasToAutoRemoveUnlinked') && $field->hasToAutoRemoveUnlinked()) {
+                    foreach ($diff['deleted'] as $deletedId) {
+                        $ins = $relatedClass::getInstance($deletedId);
+                        $ins->delete();
+                    }
                 }
 
                 if ($relatedMode){
@@ -524,11 +531,13 @@ abstract class AbstractInstance
         return $instance->save();
     }
 
-    public static function feedInstance(AbstractInstance $instance, array $params): static
+    public static function feedInstance(AbstractInstance $instance, array $params, string $view = ''): static
     {
         $schema = Schema::get(static::GENERATED_TYPE);
 
         foreach ($params as $param => $value) {
+
+            if ($schema->hasToExcludeFieldFromViewFeed($view, $param)) continue;
 
             $field = $schema->getField($param);
 
