@@ -122,9 +122,9 @@ abstract class AbstractInstance
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    public static function getInstance($id = null, string $component = self::GENERATED_TYPE, array $initialData = []): static
+    public static function getInstance($id = null, string $component = self::COMPONENT, array $initialData = []): static
     {
-        if (!$component) $component = static::GENERATED_TYPE;
+        if (!$component) $component = static::COMPONENT;
         if (!$id || !$component) {
             $r = new static();
 
@@ -192,7 +192,7 @@ abstract class AbstractInstance
      */
     public function getIdColumnValue()
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         $idColumn = $schema->getIdString();
         return $this->DATA[$idColumn];
     }
@@ -230,8 +230,12 @@ abstract class AbstractInstance
          */
         list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
         if (!$isUpdate) {
+            /** @var AbstractField $fieldsWithDefaultValue */
             $fieldsWithDefaultValue = $schema->getFieldsWithDefaultValue();
             foreach ($fieldsWithDefaultValue as $fieldWithDefaultValue) {
+                $defaultValueKey = $fieldWithDefaultValue->getName();
+                if (isset($this->UPDATED[$defaultValueKey])) continue;
+
                 $defaultValue = $fieldWithDefaultValue->getDefaultValue();
                 $setter = $fieldWithDefaultValue->getSetter();
                 $this->{$setter}($defaultValue);
@@ -375,9 +379,9 @@ abstract class AbstractInstance
         }
 
         if ($reload) {
-            $cacheCode = Instantiator::getInstanceCode(static::GENERATED_TYPE, $id);
+            $cacheCode = Instantiator::getInstanceCode(static::COMPONENT, $id);
             InstanceCache::clearCode($cacheCode);
-            return Instantiator::make(static::GENERATED_TYPE, $id);
+            return Instantiator::make(static::COMPONENT, $id);
         }
 
         return $this;
@@ -392,7 +396,7 @@ abstract class AbstractInstance
          * @var DatabaseConnector $connection
          * @var Query $caller
          */
-        list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::COMPONENT);
 
         $origIdColumn = $schema->getIdColumn();
         $origIdColumn = $origIdColumn[0];
@@ -402,7 +406,7 @@ abstract class AbstractInstance
         $caller->andIntegerEqual($idColumn, $id);
 
         $connection->query($connection->getDeleteQuery($caller));
-        $cacheCode = Instantiator::getInstanceCode(static::GENERATED_TYPE, $id);
+        $cacheCode = Instantiator::getInstanceCode(static::COMPONENT, $id);
         InstanceCache::clearCode($cacheCode);
         $query = $connection->getSelectQuery($caller);
         QueryCache::set($connector, $query, []);
@@ -425,7 +429,7 @@ abstract class AbstractInstance
         /**
          * @var Query $caller
          */
-        list($caller) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        list($caller) = Instantiator::getQueryCaller(static::COMPONENT);
         return $caller;
     }
 
@@ -440,7 +444,7 @@ abstract class AbstractInstance
         if (!$queryCaller) {
             $queryCaller = static::getQueryCaller();
         }
-        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
+        return Instantiator::makeResults(static::COMPONENT, $queryCaller->selectDistinct());
     }
 
     /**
@@ -453,7 +457,7 @@ abstract class AbstractInstance
     {
         if (!$queryCaller) $queryCaller = static::getQueryCaller();
         $queryCaller->pagination(1, 1);
-        $r = Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
+        $r = Instantiator::makeResults(static::COMPONENT, $queryCaller->selectDistinct());
         if (count($r) > 0) {
             return $r[0];
         }
@@ -468,7 +472,7 @@ abstract class AbstractInstance
         if (!$queryCaller) $queryCaller = static::getQueryCaller();
 
         if (!$countableField) {
-            $schema = Schema::get(static::GENERATED_TYPE);
+            $schema = Schema::get(static::COMPONENT);
             $countableField = $schema->getCountableField();
         }
 
@@ -484,7 +488,7 @@ abstract class AbstractInstance
     {
         $total = static::getCount($queryCaller, $countableField);
         if ($total === 0) return 0;
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         $itemsPerPage = $schema->getItemsPerPage();
         if ($itemsPerPage <= 0) return 0;
         return getTotalPages($total, $itemsPerPage);
@@ -501,15 +505,15 @@ abstract class AbstractInstance
     public static function getPage(int $page, Query $queryCaller = null): array
     {
         if (!$queryCaller) $queryCaller = static::getQueryCaller();
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         $limit = $schema->getItemsPerPage();
         if ($limit >= 0) $queryCaller->pagination($page, $limit);
-        return Instantiator::makeResults(static::GENERATED_TYPE, $queryCaller->selectDistinct());
+        return Instantiator::makeResults(static::COMPONENT, $queryCaller->selectDistinct());
     }
 
     public function getComponent(): string
     {
-        return static::GENERATED_TYPE;
+        return static::COMPONENT;
     }
 
     public function toArray(): array
@@ -543,7 +547,7 @@ abstract class AbstractInstance
 
     public static function feedInstance(AbstractInstance $instance, array $params, string $view = ''): static
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         foreach ($params as $param => $value) {
 
