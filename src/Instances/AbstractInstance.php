@@ -37,6 +37,7 @@ use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
 use Lkt\Factory\Schemas\Fields\EmailField;
 use Lkt\Factory\Schemas\Fields\FloatField;
+use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\ForeignKeysField;
 use Lkt\Factory\Schemas\Fields\HTMLField;
 use Lkt\Factory\Schemas\Fields\IdField;
@@ -237,7 +238,7 @@ abstract class AbstractInstance
                 if (isset($this->UPDATED[$defaultValueKey])) continue;
 
                 $defaultValue = $fieldWithDefaultValue->getDefaultValue();
-                $setter = $fieldWithDefaultValue->getSetter();
+                $setter = $fieldWithDefaultValue->getSetterForPrimitiveValue();
                 $this->{$setter}($defaultValue);
             }
         }
@@ -337,7 +338,7 @@ abstract class AbstractInstance
                     }
                 }
 
-                if ($relatedMode){
+                if ($relatedMode) {
                     $relatedForeignKeyColumn = $relatedSchema->getField($field->getColumn());
                     $relatedForeignKeyKey = $relatedForeignKeyColumn->getName();
                 }
@@ -366,7 +367,7 @@ abstract class AbstractInstance
                 }
 
                 if ($foreignKeysMode && count($foreignKeysIds) > 0) {
-                    $setter = 'set'. ucfirst($field->getName());
+                    $setter = 'set' . ucfirst($field->getName());
                     $this->{$setter}($foreignKeysIds);
                     $hasToReUpdate = true;
                 }
@@ -595,6 +596,14 @@ abstract class AbstractInstance
                 } else {
                     $instance->_setForeignListWithData($param, $value);
                 }
+
+            } elseif ($field instanceof ForeignKeyField) {
+                if ($field->keyIsId($param)) {
+                    $instance->_setIntegerVal($field->getName(), $value);
+
+                } else {
+//                    $instance->_setForeignListWithData($param, $value);
+                }
             }
         }
 
@@ -636,7 +645,15 @@ abstract class AbstractInstance
                     $t[] = $item->readAsRelated();
                 }
                 $r[$field->getName()] = $t;
-                $r[$field->getName().'Ids'] = $this->{$getterIds}();;
+                $r[$field->getName() . 'Ids'] = $this->{$getterIds}();
+
+            } elseif ($field instanceof ForeignKeyField) {
+                $getter = $field->getGetterForData();
+                $getterIds = $field->getGetterForPrimitiveValue();
+                $item = $this->{$getter}();
+                if ($item) $item = $item->readAsRelated();
+                $r[$field->getName()] = $item;
+                $r[$field->getName() . 'Id'] = $this->{$getterIds}();
 
             } elseif ($field instanceof MethodGetterField) {
                 $getter = $field->getName();
@@ -646,7 +663,7 @@ abstract class AbstractInstance
                 $getter = $field->getGetterForPrimitiveValue();
                 $format = $field->getDefaultReadFormat();
                 if ($format !== '') {
-                    $r[$field->getName()] = $this->{$getter.'Formatted'}($format);
+                    $r[$field->getName()] = $this->{$getter . 'Formatted'}($format);
 
                 } else {
                     $r[$field->getName()] = $this->{$getter}();
