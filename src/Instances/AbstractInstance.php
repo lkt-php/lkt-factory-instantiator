@@ -652,6 +652,7 @@ abstract class AbstractInstance
                 $getterIds = $field->getGetterForPrimitiveValue();
                 $item = $this->{$getter}();
                 if ($item) $item = $item->readAsRelated();
+                if (!$item) $item = [];
                 $r[$field->getName()] = $item;
                 $r[$field->getName() . 'Id'] = $this->{$getterIds}();
 
