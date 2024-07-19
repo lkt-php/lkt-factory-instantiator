@@ -109,12 +109,14 @@ trait ColumnFileTrait
      */
     protected function _getPublicPath(string $fieldName): string
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         /** @var FileField $field */
         $field = $schema->getField($fieldName);
 
         if ($field->hasPublicPath()) {
-            return $field->getPublicPath() . '/' . $this->_getFileName($fieldName);
+            $r = $field->getPublicPath() . '/' . $this->_getFileName($fieldName);
+            $r = str_replace(':component', static::COMPONENT, $r);
+            return $r;
         }
         return '';
     }
