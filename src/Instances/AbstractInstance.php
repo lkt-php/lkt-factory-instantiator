@@ -8,6 +8,7 @@ use Lkt\Connectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Instantiator\Exceptions\UnsetFieldStorePathException;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnConcatTrait;
@@ -36,6 +37,7 @@ use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
 use Lkt\Factory\Schemas\Fields\EmailField;
+use Lkt\Factory\Schemas\Fields\FileField;
 use Lkt\Factory\Schemas\Fields\FloatField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\ForeignKeysField;
@@ -230,6 +232,8 @@ abstract class AbstractInstance
          * @var Query $queryBuilder
          */
         list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+
+        // Create only: set default values
         if (!$isUpdate) {
             /** @var AbstractField $fieldsWithDefaultValue */
             $fieldsWithDefaultValue = $schema->getFieldsWithDefaultValue();
@@ -243,6 +247,24 @@ abstract class AbstractInstance
             }
         }
 
+
+        $pendingUploadFiles = [];
+        if (count($this->UPDATED) > 0) {
+            // Check if it's needed to store a base64 file:
+            $fileFields = $schema->getFileFields();
+            foreach ($fileFields as $fileField) {
+                if ($this->_fileValUpdatedWithBase64Data($fileField->getName())) {
+                    $storePath = $fileField->getStorePath();
+                    if ($storePath === ''){
+                        throw UnsetFieldStorePathException::getInstance($fileField->getName(), $schema->getComponent());
+                    }
+
+                    $pendingUploadFiles[$fileField->getName()] = $this->UPDATED[$fileField->getName()];
+                    $this->UPDATED[$fileField->getName()] = '';
+                }
+            }
+        }
+
         $parsed = $connection->prepareDataToStore($schema, $this->UPDATED);
 
         $origIdColumn = $schema->getIdColumn();
@@ -251,7 +273,7 @@ abstract class AbstractInstance
         $id = 0;
 
         if (count($this->UPDATED) > 0) {
-
+            // Save current instance process
             $queryBuilder->updateData($parsed);
 
             if ($isUpdate) {
@@ -276,6 +298,7 @@ abstract class AbstractInstance
             $reload = true;
         }
 
+        // Get current instance ID (if it's been created)
         if ($id > 0 && (!isset($this->DATA[$origIdColumn]) || !$this->DATA[$origIdColumn])) {
             $this->DATA[$origIdColumn] = $id;
 
@@ -285,6 +308,14 @@ abstract class AbstractInstance
 
         $hasToReUpdate = false;
 
+        if (count($pendingUploadFiles) > 0) {
+            foreach ($pendingUploadFiles as $fileFieldName => $fileFieldValue) {
+                $this->_storeBase64DataAsFile($fileFieldName, $fileFieldValue, $id);
+                $hasToReUpdate = true;
+            }
+        }
+
+        // Update relational data
         if (count($this->PENDING_UPDATE_RELATED_DATA) > 0) {
             foreach ($this->PENDING_UPDATE_RELATED_DATA as $column => $data) {
 
@@ -604,6 +635,8 @@ abstract class AbstractInstance
                 } else {
 //                    $instance->_setForeignListWithData($param, $value);
                 }
+            } elseif ($field instanceof FileField) {
+                $instance->_setFileVal($param, $value);
             }
         }
 

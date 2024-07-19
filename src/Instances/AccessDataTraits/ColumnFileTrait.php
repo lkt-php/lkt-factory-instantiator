@@ -8,6 +8,7 @@ use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\FileField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\MIME;
 
 trait ColumnFileTrait
 {
@@ -47,11 +48,46 @@ trait ColumnFileTrait
      */
     protected function _setFileVal(string $fieldName, string $value = null): static
     {
+        $value = trim($value);
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
         ], false);
 
         $this->UPDATED = $this->UPDATED + $converter->parse();
+        return $this;
+    }
+
+    protected function _fileValUpdatedWithBase64Data(string $fieldName): bool
+    {
+        $src = $this->UPDATED[$fieldName] instanceof File ? $this->UPDATED[$fieldName]->path : null;
+
+        return is_string($src)
+            && strlen($src) > 5
+            && str_contains($src, ';base64,');
+    }
+
+    protected function _storeBase64DataAsFile(string $fieldName, File $file, $fileName): static
+    {
+        $base64 = explode(';base64,', $file->path)[1];
+        $content = base64_decode($base64);
+
+        $f = finfo_open();
+
+        $mime_type = finfo_buffer($f, $content, FILEINFO_MIME_TYPE);
+        finfo_close($f);
+
+        $ext = MIME::getExtensionByMime($mime_type);
+
+        $schema = Schema::get(static::COMPONENT);
+        $field = $schema->getFileField($fieldName);
+        $storePath = $field->getStorePath();
+
+        $storeName = "$fileName";
+        $name = "$storePath/$storeName.$ext";
+
+        file_put_contents($name, $content);
+
+        $this->_setFileVal($fieldName, $storeName);
         return $this;
     }
 

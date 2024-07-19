@@ -2,9 +2,10 @@
   "name": "lkt/factory-instantiator",
   "description": "LKT Factory Instantiator",
   "type": "library",
-  "version": "2.1.17",
+  "version": "2.1.18",
   "require": {
     "php": ">=8.1.0",
+    "ext-fileinfo": "*",
     "ext-intl": "*",
     "ext-json": "*",
     "ext-openssl": "*",
@@ -13,7 +14,8 @@
     "lkt/tools": "^2.0",
     "lkt/factory-schemas": "^2.0",
     "lkt/query-builder": "^2.0",
-    "lkt/file-reader": "^1.0"
+    "lkt/file-reader": "^1.0",
+    "lkt/mime": "^1.0"
   },
   "require-dev": {
     "lkt/mysql-connector": "^2.0",
