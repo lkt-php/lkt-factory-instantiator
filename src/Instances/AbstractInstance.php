@@ -695,7 +695,7 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof FileField) {
                 $getter = $field->getGetterForPrimitiveValue().'PublicPath';
-                $r[$field->getColumn()] = $this->{$getter}();
+                $r[$field->getName()] = $this->{$getter}();
 
             } elseif ($field instanceof DateTimeField || $field instanceof UnixTimeStampField) {
                 $getter = $field->getGetterForPrimitiveValue();

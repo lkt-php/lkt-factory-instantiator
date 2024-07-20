@@ -48,6 +48,7 @@ trait ColumnFileTrait
      */
     protected function _setFileVal(string $fieldName, string $value = null): static
     {
+        if ($value === $this->_getPublicPath($fieldName)) return $this;
         $value = trim($value);
         $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
             $fieldName => $value,
@@ -66,7 +67,7 @@ trait ColumnFileTrait
             && str_contains($src, ';base64,');
     }
 
-    protected function _storeBase64DataAsFile(string $fieldName, File $file, $fileName): static
+    protected function _storeBase64DataAsFile(string $fieldName, File $file, $id): static
     {
         $base64 = explode(';base64,', $file->path)[1];
         $content = base64_decode($base64);
@@ -82,8 +83,9 @@ trait ColumnFileTrait
         $field = $schema->getFileField($fieldName);
         $storePath = $field->getStorePath();
 
-        $storeName = "$fileName";
-        $name = "$storePath/$storeName.$ext";
+        $component = static::COMPONENT;
+        $storeName = "$component-$id-$fieldName.$ext";
+        $name = "$storePath/$storeName";
 
         file_put_contents($name, $content);
 
@@ -114,8 +116,12 @@ trait ColumnFileTrait
         $field = $schema->getField($fieldName);
 
         if ($field->hasPublicPath()) {
-            $r = $field->getPublicPath() . '/' . $this->_getFileName($fieldName);
+//            $r = $field->getPublicPath() . '/' . $this->_getFileName($fieldName);
+            $r = $field->getPublicPath();
             $r = str_replace(':component', static::COMPONENT, $r);
+            $r = str_replace(':field', $fieldName, $r);
+            $r = str_replace(':id', $this->getIdColumnValue(), $r);
+            $r = str_replace(':value', $this->_getFileName($fieldName), $r);
             return $r;
         }
         return '';

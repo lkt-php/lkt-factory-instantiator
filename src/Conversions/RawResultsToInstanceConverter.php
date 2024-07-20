@@ -7,6 +7,7 @@ use Lkt\Factory\Instantiator\Validations\ValidateFieldValue;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
+use Lkt\Factory\Schemas\Fields\FileField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\Factory\Schemas\Values\ComponentValue;
@@ -68,8 +69,12 @@ final class RawResultsToInstanceConverter
                 }
             }
 
-            $value = isset($data[$searchKey]) ? $data[$searchKey] : null;
-            $value = ParseFieldValue::parse($field, $value);
+            $originalValue = isset($data[$searchKey]) ? $data[$searchKey] : null;
+            $value = ParseFieldValue::parse($field, $originalValue);
+
+            if ($field instanceof FileField) {
+                $result["{$storeKey}Name"] = $originalValue;
+            }
 
             if ($allFields || isset($data[$searchKey])) {
                 $result[$storeKey] = $value;
