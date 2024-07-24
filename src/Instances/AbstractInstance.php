@@ -712,6 +712,8 @@ abstract class AbstractInstance
                 $r[$field->getName()] = $this->{$getter}();
             }
         }
+
+        if (method_exists($this, 'postProcessRead')) return $this->postProcessRead($r);
         return $r;
     }
 
