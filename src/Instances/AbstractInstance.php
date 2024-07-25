@@ -136,8 +136,17 @@ abstract class AbstractInstance
 
             if (count($fields)) {
                 foreach ($fields as $field) {
-                    $setter = $field->getSetter();
+                    $setter = $field->getSetterForPrimitiveValue();
                     $r->{$setter}($field->getEmptyDefault());
+                }
+            }
+
+            $fields = $schema->getFieldsWithDefaultValue();
+
+            if (count($fields)) {
+                foreach ($fields as $field) {
+                    $setter = $field->getSetterForPrimitiveValue();
+                    $r->{$setter}($field->getDefaultValue());
                 }
             }
 
