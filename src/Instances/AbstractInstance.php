@@ -605,6 +605,13 @@ abstract class AbstractInstance
             } elseif ($field instanceof DateTimeField) {
                 $instance->_setDateTimeVal($param, $value);
 
+            } elseif ($field instanceof ForeignKeyField) {
+                if ($field->keyIsId($param)) {
+                    $instance->_setIntegerVal($field->getName(), $value);
+
+                } else {
+//                    $instance->_setForeignListWithData($param, $value);
+                }
             } elseif ($field instanceof IntegerChoiceField) {
                 $instance->_setIntegerChoiceVal($param, (int)$value);
 
@@ -637,13 +644,6 @@ abstract class AbstractInstance
                     $instance->_setForeignListWithData($param, $value);
                 }
 
-            } elseif ($field instanceof ForeignKeyField) {
-                if ($field->keyIsId($param)) {
-                    $instance->_setIntegerVal($field->getName(), $value);
-
-                } else {
-//                    $instance->_setForeignListWithData($param, $value);
-                }
             } elseif ($field instanceof FileField) {
                 $instance->_setFileVal($param, $value);
             }
