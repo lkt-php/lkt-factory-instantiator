@@ -47,6 +47,9 @@ use Lkt\Factory\Schemas\Fields\IntegerChoiceField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\JSONField;
 use Lkt\Factory\Schemas\Fields\MethodGetterField;
+use Lkt\Factory\Schemas\Fields\PivotField;
+use Lkt\Factory\Schemas\Fields\PivotLeftIdField;
+use Lkt\Factory\Schemas\Fields\PivotPositionField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
@@ -419,6 +422,52 @@ abstract class AbstractInstance
             $this->save();
         }
 
+        if (count($this->PIVOT_SORT) > 0) {
+            foreach ($this->PIVOT_SORT as $column => $ids) {
+
+                $ownField = $schema->getPivotField($column);
+
+                // Pivot table fields (intermediate table)
+                $pivotSchema = $ownField->getPivotSchema();
+
+                $pointingField = $pivotSchema->getOneFieldPointingToComponent(static::COMPONENT);
+
+                if ($pointingField instanceof PivotLeftIdField) {
+                    $referencedField = $pivotSchema->getPivotRightIdField();
+                } else {
+                    $referencedField = $pivotSchema->getPivotLeftIdField();
+                }
+
+                /** @var PivotPositionField $positionField */
+                $positionField = $pivotSchema->getOnePositionField();
+
+                $positionGetter = $positionField->getGetterForPrimitiveValue();
+                $positionSetter = $positionField->getSetterForPrimitiveValue();
+                $referencedGetter = $referencedField->getGetterForPrimitiveValue();
+
+
+                $anonymous = $pivotSchema->getItemInstance();
+                $query = $pivotSchema->getQueryBuilder();
+
+                $query
+                    ->andIntegerIn($referencedField->getColumn(), $ids);
+
+                $results = $anonymous::getMany($query);
+
+                foreach ($results as $result) {
+                    $updatedPosition = array_search($result->{$referencedGetter}(), $ids);
+
+                    $position = $result->{$positionGetter}();
+
+                    if ($updatedPosition !== $position) {
+                        $result
+                            ->{$positionSetter}($updatedPosition)
+                            ->save();
+                    }
+                }
+            }
+        }
+
         if ($reload) {
             $cacheCode = Instantiator::getInstanceCode(static::COMPONENT, $id);
             InstanceCache::clearCode($cacheCode);
@@ -646,6 +695,9 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof FileField) {
                 $instance->_setFileVal($param, $value);
+
+            } elseif ($field instanceof PivotField) {
+                $instance->_setPivotSort($param, $value);
             }
         }
 
@@ -756,5 +808,44 @@ abstract class AbstractInstance
         $r = [...$r, ...$this->readFields($fields)];
 
         return $r;
+    }
+
+    public function linkPivot(string $pivotComponent, $id): static
+    {
+        $pivotSchema = Schema::get($pivotComponent);
+
+        $pointingField = $pivotSchema->getOneFieldPointingToComponent(static::COMPONENT);
+
+        if ($pointingField instanceof PivotLeftIdField) {
+            $referencedField = $pivotSchema->getPivotRightIdField();
+        } else {
+            $referencedField = $pivotSchema->getPivotLeftIdField();
+        }
+
+        /** @var PivotPositionField $positionField */
+        $positionField = $pivotSchema->getOnePositionField();
+
+        /** @var Query $queryBuilder */
+        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
+
+        $pivotQueryBuilder->setColumns(["MAX({$positionField->getColumn()}) AS {$positionField->getName()}"]);
+
+        $results = $pivotQueryBuilder->select();
+        $nextPosition = $results[0]['position'] === null ? 0 : (int)$results[0]['position'] + 1;
+
+
+        $instance = $pivotSchema->getItemInstance();
+
+        $pointingSetter = $pointingField->getSetterForPrimitiveValue();
+        $instance->{$pointingSetter}($this->getIdColumnValue());
+
+        $referencedSetter = $referencedField->getSetterForPrimitiveValue();
+        $instance->{$referencedSetter}($id);
+
+        $positionSetter = $positionField->getSetterForPrimitiveValue();
+        $instance->{$positionSetter}($nextPosition);
+
+        $instance->save();
+        return $this;
     }
 }

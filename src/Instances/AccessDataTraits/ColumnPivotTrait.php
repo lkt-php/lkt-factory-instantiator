@@ -21,6 +21,64 @@ use function Lkt\Tools\Arrays\getArrayFirstPosition;
 
 trait ColumnPivotTrait
 {
+
+    protected array $PIVOT_SORT = [];
+
+    public function _getPivotQueryBuilder(string $column): Query
+    {
+        // Own fields
+        $ownSchema = Schema::get(static::COMPONENT);
+        $ownField = $ownSchema->getPivotField($column);
+
+        // Pivot table fields (intermediate table)
+        $pivotSchema = $ownField->getPivotSchema();
+        $pivotField = $pivotSchema->getOneFieldPointingToComponent($ownField->getComponent());
+        $pivotOwnField = $pivotSchema->getOneFieldPointingToComponent(static::COMPONENT);
+        $pivotOrderField = $pivotSchema->getOnePositionField();
+
+        // Referenced table
+        $referencedSchema = Schema::get($ownField->getComponent());
+        $referencedField = $referencedSchema->getField($referencedSchema->getIdColumn()[0]);
+
+        // Prepare query builder
+
+        /** @var Query $queryBuilder */
+        list($referencedQueryBuilder) = Instantiator::getQueryCaller($ownField->getComponent());
+
+        /** @var Query $pivotQueryBuilder */
+        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotSchema->getComponent());
+
+        $pivotQueryBuilder
+            ->andIntegerEqual($pivotOwnField->getColumn(), $this->getIdColumnValue())
+            ->orderBy($pivotOrderField->getColumn() . ' ASC');
+
+        $referencedQueryBuilder
+            ->leftJoin($pivotQueryBuilder, $pivotField->getColumn(), $referencedField->getColumn())
+        ;
+
+        return $referencedQueryBuilder;
+    }
+
+    public function _setPivotSort(string $column, array $data)
+    {
+        // Own fields
+        $ownSchema = Schema::get(static::COMPONENT);
+        $ownField = $ownSchema->getPivotField($column);
+
+        // Referenced table
+        $referencedSchema = Schema::get($ownField->getComponent());
+
+        $idColumn = $referencedSchema->getIdColumn()[0];
+
+        $items = array_map(function ($datum) use ($idColumn) {
+            return $datum[$idColumn];
+        }, $data);
+
+        $this->PIVOT_SORT[$column] = $items;
+        return $this;
+    }
+
+
     /**
      * @param string $column
      * @return void
@@ -31,16 +89,17 @@ trait ColumnPivotTrait
      */
     private function _loadPivots(string $column)
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         /** @var PivotField $field */
         $field = $schema->getField($column);
         $idColumn = $schema->getIdString();
 
-        $pivotedSchema = Schema::get($field->getPivotComponent());
+        /** @var Schema $pivotedSchema */
+        $pivotedSchema = $field->getPivotSchema();
 
         /** @var AbstractField $pivotedField */
-        $pivotedField = $pivotedSchema->getOneFieldPointingToComponent(static::GENERATED_TYPE);
+        $pivotedField = $pivotedSchema->getOneFieldPointingToComponent(static::COMPONENT);
 
         $pivotedFieldColumn = trim($pivotedField->getColumn());
 
@@ -89,13 +148,13 @@ trait ColumnPivotTrait
         }
 
         /** @var Schema $fromSchema */
-        $fromSchema = Schema::get(static::GENERATED_TYPE);
+        $fromSchema = Schema::get(static::COMPONENT);
 
         /** @var PivotField $fromField */
         $fromField = $fromSchema->getField($column);
 
         /** @var Schema $pivotSchema */
-        $pivotSchema = Schema::get($fromField->getPivotComponent());
+        $pivotSchema = $fromField->getPivotSchema();
 
         /** @var AbstractField $pivotedField */
         $fieldPivotColumn = $pivotSchema->getOneFieldPointingToComponent($fromField->getComponent());
