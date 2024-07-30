@@ -49,11 +49,46 @@ trait ColumnPivotTrait
         list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotSchema->getComponent());
 
         $pivotQueryBuilder
-            ->andIntegerEqual($pivotOwnField->getColumn(), $this->getIdColumnValue())
-            ->orderBy($pivotOrderField->getColumn() . ' ASC');
+            ->andIntegerEqual($pivotOwnField->getColumn(), $this->getIdColumnValue());
 
         $referencedQueryBuilder
             ->leftJoin($pivotQueryBuilder, $pivotField->getColumn(), $referencedField->getColumn())
+            ->orderBy($pivotOrderField->getColumn() . ' ASC')
+        ;
+
+        return $referencedQueryBuilder;
+    }
+
+    public function _getAvailablePivotQueryBuilder(string $column): Query
+    {
+        // Own fields
+        $ownSchema = Schema::get(static::COMPONENT);
+        $ownField = $ownSchema->getPivotField($column);
+
+        // Pivot table fields (intermediate table)
+        $pivotSchema = $ownField->getPivotSchema();
+        $pivotField = $pivotSchema->getOneFieldPointingToComponent($ownField->getComponent());
+        $pivotOwnField = $pivotSchema->getOneFieldPointingToComponent(static::COMPONENT);
+        $pivotOrderField = $pivotSchema->getOnePositionField();
+
+        // Referenced table
+        $referencedSchema = Schema::get($ownField->getComponent());
+        $referencedField = $referencedSchema->getField($referencedSchema->getIdColumn()[0]);
+
+        // Prepare query builder
+
+        /** @var Query $queryBuilder */
+        list($referencedQueryBuilder) = Instantiator::getQueryCaller($ownField->getComponent());
+
+        /** @var Query $pivotQueryBuilder */
+        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotSchema->getComponent());
+
+        $pivotQueryBuilder
+            ->setColumns([$pivotOwnField->getColumn()])
+            ->andIntegerEqual($pivotOwnField->getColumn(), $this->getIdColumnValue());
+
+        $referencedQueryBuilder
+            ->andFieldNotInSubQuery($pivotOwnField->getColumn(), $pivotQueryBuilder)
         ;
 
         return $referencedQueryBuilder;
@@ -125,6 +160,14 @@ trait ColumnPivotTrait
         $this->PIVOT[$column] = $pivots;
     }
 
+    public function _getPivots(string $column)
+    {
+        if (!isset($this->PIVOT[$column])) {
+            $this->_loadPivots($column);
+        }
+        return $this->PIVOT[$column];
+    }
+
 
     /**
      * @param string $column
@@ -135,9 +178,9 @@ trait ColumnPivotTrait
      */
     protected function _getPivotVal(string $column): array
     {
-        if (!isset($this->PIVOT[$column])) {
-            $this->_loadPivots($column);
-        }
+//        if (!isset($this->PIVOT[$column])) {
+//            $this->_loadPivots($column);
+//        }
 
         if (isset($this->UPDATED_PIVOT_DATA[$column])) {
             return $this->UPDATED_PIVOT_DATA[$column];
@@ -146,6 +189,34 @@ trait ColumnPivotTrait
         if (isset($this->PIVOT_DATA[$column])) {
             return $this->PIVOT_DATA[$column];
         }
+
+        /** @var Schema $fromSchema */
+        $fromSchema = Schema::get(static::COMPONENT);
+
+        /** @var PivotField $fromField */
+        $fromField = $fromSchema->getField($column);
+
+        /** @var Schema $pivotSchema */
+        $pivotSchema = $fromField->getPivotSchema();
+
+
+        $pivotIdentifiers = $pivotSchema->getIdentifiers();
+        $pivotForeignColumn = null;
+        foreach ($pivotIdentifiers as $identifier) {
+            if ($identifier->getComponent() === $fromField->getComponent()) {
+                $pivotForeignColumn = $identifier;
+                break;
+            }
+        }
+
+        $toSchema = Schema::get($pivotForeignColumn->getComponent());
+
+        $queryBuilder = $this->_getPivotQueryBuilder($column);
+        $results = Instantiator::makeResults($toSchema->getComponent(), $queryBuilder->select());
+
+        $this->PIVOT_DATA[$column] = $results;
+        return $this->PIVOT_DATA[$column];
+
 
         /** @var Schema $fromSchema */
         $fromSchema = Schema::get(static::COMPONENT);

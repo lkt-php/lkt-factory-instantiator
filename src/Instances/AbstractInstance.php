@@ -289,10 +289,23 @@ abstract class AbstractInstance
             $queryBuilder->updateData($parsed);
 
             if ($isUpdate) {
-                $idColumn = $schema->getField($origIdColumn);
-                $idColumn = $idColumn->getColumn();
-                $queryBuilder->andIntegerEqual($idColumn, $this->DATA[$origIdColumn]);
-                $query = $connection->getUpdateQuery($queryBuilder);
+
+                if ($schema->isPivot()) {
+                    $pivotColumns = $schema->getIdColumn();
+                    foreach ($pivotColumns as $pivotColumn) {
+                        $idColumn = $schema->getField($pivotColumn);
+                        $originalValueKey = $idColumn->getGetterForPrimitiveValue();
+                        $originalValueKey = lcfirst(substr($originalValueKey, 3));
+                        $idColumn = $idColumn->getColumn();
+                        $queryBuilder->andIntegerEqual($idColumn, $this->DATA[$originalValueKey]);
+                    }
+                    $query = $connection->getUpdateQuery($queryBuilder);
+                } else {
+                    $idColumn = $schema->getField($origIdColumn);
+                    $idColumn = $idColumn->getColumn();
+                    $queryBuilder->andIntegerEqual($idColumn, $this->DATA[$origIdColumn]);
+                    $query = $connection->getUpdateQuery($queryBuilder);
+                }
             } else {
                 $query = $connection->getInsertQuery($queryBuilder);
             }
@@ -444,24 +457,41 @@ abstract class AbstractInstance
                 $positionGetter = $positionField->getGetterForPrimitiveValue();
                 $positionSetter = $positionField->getSetterForPrimitiveValue();
                 $referencedGetter = $referencedField->getGetterForPrimitiveValue();
+                $referencedSetter = $referencedField->getSetterForPrimitiveValue();
+                $pointingSetter = $pointingField->getSetterForPrimitiveValue();
 
+                $results = $this->_getPivots($ownField->getName());
 
-                $anonymous = $pivotSchema->getItemInstance();
-                $query = $pivotSchema->getQueryBuilder();
+                $checkedIds = [];
 
-                $query
-                    ->andIntegerIn($referencedField->getColumn(), $ids);
-
-                $results = $anonymous::getMany($query);
-
+                // Update existing pivots
                 foreach ($results as $result) {
-                    $updatedPosition = array_search($result->{$referencedGetter}(), $ids);
+                    $id = $result->{$referencedGetter}();
+                    $updatedPosition = array_search($id, $ids);
+                    $checkedIds[] = $id;
 
                     $position = $result->{$positionGetter}();
 
                     if ($updatedPosition !== $position) {
                         $result
                             ->{$positionSetter}($updatedPosition)
+                            ->save();
+                    }
+
+                    // Unlink pivot relation
+                    if (!in_array($id, $ids, true)) {
+                        $result->delete();
+                    }
+                }
+
+                // Link new pivot relations
+                foreach ($ids as $i => $id) {
+                    if (!in_array($id, $checkedIds, true)) {
+                        $ins = $pivotSchema->getItemInstance();
+                        $ins
+                            ->{$pointingSetter}($this->getIdColumnValue())
+                            ->{$referencedSetter}($id)
+                            ->{$positionSetter}($i)
                             ->save();
                     }
                 }
@@ -488,12 +518,26 @@ abstract class AbstractInstance
          */
         list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::COMPONENT);
 
-        $origIdColumn = $schema->getIdColumn();
-        $origIdColumn = $origIdColumn[0];
-        $idColumn = $schema->getField($origIdColumn);
-        $idColumn = $idColumn->getColumn();
-        $id = (int)$this->DATA[$origIdColumn];
-        $caller->andIntegerEqual($idColumn, $id);
+
+        if ($schema->isPivot()) {
+            $pivotColumns = $schema->getIdColumn();
+            foreach ($pivotColumns as $pivotColumn) {
+                $idColumn = $schema->getField($pivotColumn);
+                $originalValueKey = $idColumn->getGetterForPrimitiveValue();
+                $originalValueKey = lcfirst(substr($originalValueKey, 3));
+                $idColumn = $idColumn->getColumn();
+                $caller->andIntegerEqual($idColumn, $this->DATA[$originalValueKey]);
+            }
+
+        } else {
+
+            $origIdColumn = $schema->getIdColumn();
+            $origIdColumn = $origIdColumn[0];
+            $idColumn = $schema->getField($origIdColumn);
+            $idColumn = $idColumn->getColumn();
+            $id = (int)$this->DATA[$origIdColumn];
+            $caller->andIntegerEqual($idColumn, $id);
+        }
 
         $connection->query($connection->getDeleteQuery($caller));
         $cacheCode = Instantiator::getInstanceCode(static::COMPONENT, $id);
@@ -505,16 +549,31 @@ abstract class AbstractInstance
         $this->RELATED_DATA = [];
         $this->PIVOT = [];
         $this->PIVOT_DATA = [];
+        $this->PIVOT_SORT = [];
         $this->UPDATED_RELATED_DATA = [];
         $this->PENDING_UPDATE_RELATED_DATA = [];
         return $this;
     }
 
     /**
+     * @deprecated
      * @return Query
      * @throws SchemaNotDefinedException
      */
     public static function getQueryCaller()
+    {
+        /**
+         * @var Query $caller
+         */
+        list($caller) = Instantiator::getQueryCaller(static::COMPONENT);
+        return $caller;
+    }
+
+    /**
+     * @return Query
+     * @throws SchemaNotDefinedException
+     */
+    public static function getQueryBuilder()
     {
         /**
          * @var Query $caller
@@ -708,7 +767,26 @@ abstract class AbstractInstance
     public function readViewFields(string $view): array
     {
         $schema = Schema::get(static::COMPONENT);
-        return $this->readFields($schema->getViewFields($view));
+
+        $r = $this->readFields($schema->getViewFields($view));
+
+        $schema = Schema::get(static::COMPONENT);
+
+        // Option value
+        $field = $schema->getRelatedModeValueField();
+        if ($field instanceof AbstractField) {
+            $getter = $field->getGetterForPrimitiveValue();
+            $r['value'] = $this->{$getter}();
+        }
+
+        // Option label
+        $field = $schema->getRelatedModeLabelField();
+        if ($field instanceof AbstractField) {
+            $getter = $field->getGetterForPrimitiveValue();
+            $r['label'] = $this->{$getter}();
+        }
+
+        return $r;
     }
 
 
@@ -767,6 +845,19 @@ abstract class AbstractInstance
                 } else {
                     $r[$field->getName()] = $this->{$getter}();
                 }
+
+            } elseif ($field instanceof PivotField) {
+
+                $getter = $field->getGetterForPrimitiveValue();
+                $items = $this->{$getter}();
+                if (!is_array($items)) $items = [];
+                $t = [];
+                foreach ($items as $item) {
+                    $t[] = $item->readViewFields('related');
+
+
+                }
+                $r[$field->getName()] = $t;
 
             } else {
                 $getter = $field->getGetterForPrimitiveValue();
@@ -846,6 +937,36 @@ abstract class AbstractInstance
         $instance->{$positionSetter}($nextPosition);
 
         $instance->save();
+        return $this;
+    }
+
+    public function unlinkPivot(string $pivotComponent, $id): static
+    {
+        $pivotSchema = Schema::get($pivotComponent);
+
+        $pointingField = $pivotSchema->getOneFieldPointingToComponent(static::COMPONENT);
+
+        if ($pointingField instanceof PivotLeftIdField) {
+            $referencedField = $pivotSchema->getPivotRightIdField();
+        } else {
+            $referencedField = $pivotSchema->getPivotLeftIdField();
+        }
+
+        /** @var PivotPositionField $positionField */
+        $positionField = $pivotSchema->getOnePositionField();
+
+        /** @var Query $queryBuilder */
+        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
+
+        $pointingGetter = $pointingField->getGetterForPrimitiveValue();
+        $pivotQueryBuilder->andIntegerEqual($pointingField->getColumn(), $this->{$pointingGetter}());
+
+        $referencedGetter = $referencedField->getGetterForPrimitiveValue();
+        $pivotQueryBuilder->andIntegerEqual($referencedField->getColumn(), $this->{$referencedGetter}());
+
+        $anonymous = $pivotSchema->getItemInstance();
+        $instance = $anonymous::getOne($pivotQueryBuilder);
+        $instance->delete();
         return $this;
     }
 }
