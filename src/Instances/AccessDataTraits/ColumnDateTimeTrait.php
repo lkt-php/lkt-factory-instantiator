@@ -84,11 +84,13 @@ trait ColumnDateTimeTrait
             $raeValueToConvert = date('Y-m-d H:i:s', $value);
         }
 
-        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+        $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
             $fieldName => $raeValueToConvert,
         ], false);
 
-        $this->UPDATED = $this->UPDATED + $converter->parse();
+        foreach ($converter->parse() as $key => $value) {
+            $this->UPDATED[$key] = $value;
+        }
         return $this;
     }
 }

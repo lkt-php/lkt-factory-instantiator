@@ -50,26 +50,35 @@ trait ColumnFileTrait
     {
         if ($value === $this->_getPublicPath($fieldName)) return $this;
         $value = trim($value);
-        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
-            $fieldName => $value,
-        ], false);
 
-        $this->UPDATED = $this->UPDATED + $converter->parse();
+        if (str_contains($value, ';base64,')) {
+            $this->UPDATED[$fieldName] = $value;
+
+        } else {
+            $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
+                $fieldName => $value,
+            ], false);
+
+            foreach ($converter->parse() as $key => $value) {
+                $this->UPDATED[$key] = $value;
+            }
+        }
         return $this;
     }
 
     protected function _fileValUpdatedWithBase64Data(string $fieldName): bool
     {
-        $src = $this->UPDATED[$fieldName] instanceof File ? $this->UPDATED[$fieldName]->path : null;
+        $src = $this->UPDATED[$fieldName] instanceof File ? $this->UPDATED[$fieldName]->path : trim($this->UPDATED[$fieldName]);
 
         return is_string($src)
             && strlen($src) > 5
             && str_contains($src, ';base64,');
     }
 
-    protected function _storeBase64DataAsFile(string $fieldName, File $file, $id): static
+    protected function _storeBase64DataAsFile(string $fieldName, File|string $file, $id): static
     {
-        $base64 = explode(';base64,', $file->path)[1];
+        $content = $file instanceof File ? $file->path : $file;
+        $base64 = explode(';base64,', $content)[1];
         $content = base64_decode($base64);
 
         $f = finfo_open();

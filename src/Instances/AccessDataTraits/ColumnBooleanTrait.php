@@ -29,11 +29,13 @@ trait ColumnBooleanTrait
      */
     protected function _setBooleanVal(string $fieldName, bool $value = false): static
     {
-        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+        $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
             $fieldName => $value,
         ], false);
 
-        $this->UPDATED = $this->UPDATED + $converter->parse();
+        foreach ($converter->parse() as $key => $value) {
+            $this->UPDATED[$key] = $value;
+        }
         return $this;
     }
 }

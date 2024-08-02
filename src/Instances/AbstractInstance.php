@@ -243,7 +243,7 @@ abstract class AbstractInstance
          * @var DatabaseConnector $connection
          * @var Query $queryBuilder
          */
-        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::GENERATED_TYPE);
+        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::COMPONENT);
 
         // Create only: set default values
         if (!$isUpdate) {

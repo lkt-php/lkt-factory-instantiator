@@ -22,7 +22,7 @@ trait ColumnForeignListTrait
      */
     protected function _getForeignListIds(string $fieldName): array
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         /** @var ForeignKeysField $field */
         $field = $schema->getField($fieldName);
@@ -52,7 +52,7 @@ trait ColumnForeignListTrait
      */
     protected function _getForeignListData(string $fieldName): array
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         /** @var ForeignKeysField $field */
         $field = $schema->getField($fieldName);
@@ -114,7 +114,7 @@ trait ColumnForeignListTrait
         } elseif (!is_string($value)) {
             $value = trim($value);
         }
-        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+        $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
             $fieldName => $value,
         ], false);
 
@@ -149,11 +149,13 @@ trait ColumnForeignListTrait
         $current = $this->_getForeignListIds($fieldName);
         foreach ($current as $val) if (!in_array($val, $value)) $r[] = $val;
 
-        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+        $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
             $fieldName => $r,
         ], false);
 
-        $this->UPDATED = $this->UPDATED + $converter->parse();
+        foreach ($converter->parse() as $key => $value) {
+            $this->UPDATED[$key] = $value;
+        }
         return $this;
     }
 }

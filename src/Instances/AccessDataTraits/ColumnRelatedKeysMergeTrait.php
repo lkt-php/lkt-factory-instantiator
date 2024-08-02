@@ -26,8 +26,8 @@ trait ColumnRelatedKeysMergeTrait
             return $this->RELATED_DATA[$column];
         }
 
-        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::GENERATED_TYPE, $column, $this->getIdColumnValue());
-        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::GENERATED_TYPE, $column, $queryUnion);
+        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::COMPONENT, $column, $this->getIdColumnValue());
+        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::COMPONENT, $column, $queryUnion);
         $instances = RelatedKeysMergeHelper::convertRawResults($results);
 
         $this->RELATED_DATA[$column] = $instances;
@@ -46,8 +46,8 @@ trait ColumnRelatedKeysMergeTrait
             return $this->RELATED_DATA[$key];
         }
 
-        $queries = RelatedKeysMergeHelper::getQueryUnion(static::GENERATED_TYPE, $column, $this->getIdColumnValue());
-        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::GENERATED_TYPE, $column, $queries);
+        $queries = RelatedKeysMergeHelper::getQueryUnion(static::COMPONENT, $column, $this->getIdColumnValue());
+        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::COMPONENT, $column, $queries);
 
         $this->RELATED_DATA[$key] = $results;
         return $this->RELATED_DATA[$key];
@@ -81,13 +81,13 @@ trait ColumnRelatedKeysMergeTrait
             return $this->PAGES[$column][$page];
         }
 
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         $field = $schema->getField($column);
 
-        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::GENERATED_TYPE, $column, $this->getIdColumnValue());
+        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::COMPONENT, $column, $this->getIdColumnValue());
         $queryUnion->pagination($page, $field->getItemsPerPage());
-        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::GENERATED_TYPE, $column, $queryUnion);
+        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::COMPONENT, $column, $queryUnion);
         $instances = RelatedKeysMergeHelper::convertRawResults($results);
 
         $this->PAGES[$column][$page] = $instances;
@@ -105,13 +105,13 @@ trait ColumnRelatedKeysMergeTrait
             return $this->PAGES[$key][$page];
         }
 
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         $field = $schema->getField($column);
 
-        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::GENERATED_TYPE, $column, $this->getIdColumnValue());
+        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::COMPONENT, $column, $this->getIdColumnValue());
         $queryUnion->pagination($page, $field->getItemsPerPage());
-        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::GENERATED_TYPE, $column, $queryUnion);
+        $results = RelatedKeysMergeHelper::getRawResultsFromQueryUnion(static::COMPONENT, $column, $queryUnion);
 
         $this->PAGES[$key][$page] = $results;
         return $this->PAGES[$key][$page];
@@ -127,8 +127,8 @@ trait ColumnRelatedKeysMergeTrait
             return $this->PAGES_TOTAL[$column];
         }
 
-        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::GENERATED_TYPE, $column, $this->getIdColumnValue());
-        $results = RelatedKeysMergeHelper::getCountFromQueryUnion(static::GENERATED_TYPE, $queryUnion);
+        $queryUnion = RelatedKeysMergeHelper::getQueryUnion(static::COMPONENT, $column, $this->getIdColumnValue());
+        $results = RelatedKeysMergeHelper::getCountFromQueryUnion(static::COMPONENT, $queryUnion);
 
         $this->PAGES_TOTAL[$column] = $results;
         return $this->PAGES_TOTAL[$column];
@@ -140,7 +140,7 @@ trait ColumnRelatedKeysMergeTrait
      */
     protected function _getRelatedKeysMergeAmountOfPages(string $column, Where $where = null)
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         /** @var RelatedKeysMergeField $field */
         $field = $schema->getField($column);

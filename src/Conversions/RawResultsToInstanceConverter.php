@@ -72,12 +72,12 @@ final class RawResultsToInstanceConverter
             $originalValue = isset($data[$searchKey]) ? $data[$searchKey] : null;
             $value = ParseFieldValue::parse($field, $originalValue);
 
-            if ($field instanceof FileField) {
-                $result["{$storeKey}Name"] = $originalValue;
-            }
-
             if ($allFields || isset($data[$searchKey])) {
                 $result[$storeKey] = $value;
+
+                if ($field instanceof FileField) {
+                    $result["{$storeKey}Name"] = $originalValue;
+                }
             }
             return $result;
         }, $result);

@@ -37,7 +37,7 @@ trait ColumnRelatedTrait
             return $this->RELATED_DATA[$column];
         }
 
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         /** @var RelatedField $field */
         $field = $schema->getField($column);
 
@@ -76,7 +76,7 @@ trait ColumnRelatedTrait
             return $this->RELATED_DATA[$column];
         }
 
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         /** @var RelatedField $field */
         $field = $schema->getField($column);
 
@@ -260,7 +260,7 @@ trait ColumnRelatedTrait
             return $this->PAGES[$fieldName][$page];
         }
 
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         /** @var RelatedField $field */
         $field = $schema->getField($fieldName);
@@ -287,7 +287,7 @@ trait ColumnRelatedTrait
             return $this->PAGES_TOTAL[$fieldName];
         }
 
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         /** @var RelatedField $field */
         $field = $schema->getField($fieldName);
@@ -313,7 +313,7 @@ trait ColumnRelatedTrait
 
     protected function _getRelatedAmountOfPages(string $type, string $fieldName, string $countableField = '', Where $where = null)
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
 
         /** @var RelatedField $field */
         $field = $schema->getField($fieldName);

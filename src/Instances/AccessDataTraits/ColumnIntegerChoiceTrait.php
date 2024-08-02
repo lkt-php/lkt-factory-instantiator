@@ -40,20 +40,22 @@ trait ColumnIntegerChoiceTrait
 
     protected function _setIntegerChoiceVal(string $fieldName, int $value = null): static
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         /** @var IntegerChoiceField $field */
         $field = $schema->getField($fieldName);
         $availableOptions = $field->getAllowedOptions();
 
         if (!in_array($value, $availableOptions, true)) {
-            throw InvalidIntegerChoiceValueException::getInstance($value, $fieldName, static::GENERATED_TYPE);
+            throw InvalidIntegerChoiceValueException::getInstance($value, $fieldName, static::COMPONENT);
         }
 
-        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+        $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
             $fieldName => $value,
         ], false);
 
-        $this->UPDATED = $this->UPDATED + $converter->parse();
+        foreach ($converter->parse() as $key => $value) {
+            $this->UPDATED[$key] = $value;
+        }
         return $this;
     }
 }

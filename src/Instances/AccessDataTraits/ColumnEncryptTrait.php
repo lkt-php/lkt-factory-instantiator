@@ -27,7 +27,7 @@ trait ColumnEncryptTrait
 
         $value = $this->_getEncryptVal($fieldName);
 
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         $field = $schema->getField($fieldName);
 
         if ($field->hasAlgorithmSHA256()) {
@@ -52,19 +52,21 @@ trait ColumnEncryptTrait
 
     protected function _setEncryptVal(string $fieldName, string $value = null): static
     {
-        $schema = Schema::get(static::GENERATED_TYPE);
+        $schema = Schema::get(static::COMPONENT);
         $field = $schema->getField($fieldName);
 
         if ($field->hasAlgorithmSHA256() && !$field->isHashMode()) {
             $this->DECRYPT_UPDATED[$fieldName] = $value;
         }
-        $value = EncryptFieldHelper::autoEncryptSchemaFieldValue(static::GENERATED_TYPE, $fieldName, $value);
+        $value = EncryptFieldHelper::autoEncryptSchemaFieldValue(static::COMPONENT, $fieldName, $value);
 
-        $converter = new RawResultsToInstanceConverter(static::GENERATED_TYPE, [
+        $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
             $fieldName => $value,
         ], false);
 
-        $this->UPDATED = $this->UPDATED + $converter->parse();
+        foreach ($converter->parse() as $key => $value) {
+            $this->UPDATED[$key] = $value;
+        }
         return $this;
     }
 }
