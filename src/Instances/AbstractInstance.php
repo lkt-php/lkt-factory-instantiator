@@ -56,6 +56,7 @@ use Lkt\Factory\Schemas\Fields\StringChoiceField;
 use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\Locale\Locale;
 use Lkt\QueryBuilding\Query;
 use function Lkt\Tools\Arrays\compareArrays;
 use function Lkt\Tools\Pagination\getTotalPages;
@@ -842,7 +843,10 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof DateTimeField || $field instanceof UnixTimeStampField) {
                 $getter = $field->getGetterForPrimitiveValue();
-                $format = $field->getDefaultReadFormat();
+
+                $format = $field->getLangDefaultReadFormat(Locale::getLangCode());
+                if (!$format) $format = $field->getDefaultReadFormat();
+
                 if ($format !== '') {
                     $r[$field->getName()] = $this->{$getter . 'Formatted'}($format);
 
