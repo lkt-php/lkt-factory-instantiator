@@ -811,7 +811,9 @@ abstract class AbstractInstance
                 $items = $this->{$getter}();
 
                 if ($field->isSingleMode()) {
-                    $r[$field->getName()] = $items->readAsRelated();
+                    if (is_object($items)) {
+                        $r[$field->getName()] = $items->readAsRelated();
+                    }
 
                 } else {
                     $t = [];
