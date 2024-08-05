@@ -398,6 +398,11 @@ abstract class AbstractInstance
                 if ($relatedMode) {
                     $relatedForeignKeyColumn = $relatedSchema->getField($field->getColumn());
                     $relatedForeignKeyKey = $relatedForeignKeyColumn->getName();
+                    if ($relatedForeignKeyColumn instanceof ForeignKeyField) {
+                        if (!$relatedForeignKeyColumn->keyIsId($relatedForeignKeyKey)) {
+                            $relatedForeignKeyKey .= 'Id';
+                        }
+                    }
                 }
 
 
@@ -412,15 +417,13 @@ abstract class AbstractInstance
                         $ins::feedInstance($ins, $datum);
                         $ins->save();
 
-                        if ($foreignKeysMode) $foreignKeysIds[] = $ins->getId();
-
                     } else {
                         $ins = $relatedClass::getInstance();
                         $ins::feedInstance($ins, $datum);
                         $ins->save();
-
-                        if ($foreignKeysMode) $foreignKeysIds[] = $ins->getId();
                     }
+
+                    if ($foreignKeysMode) $foreignKeysIds[] = $ins->getId();
                 }
 
                 if ($foreignKeysMode && count($foreignKeysIds) > 0) {
@@ -740,7 +743,11 @@ abstract class AbstractInstance
                 $instance->_setRelatedKeysValWithData($param, $value);
 
             } elseif ($field instanceof RelatedField) {
-                $instance->_setRelatedValWithData('', $param, $value);
+                if ($field->isSingleMode()) {
+                    $instance->_setRelatedValWithData('', $param, [$value]);
+                } else {
+                    $instance->_setRelatedValWithData('', $param, $value);
+                }
 
             } elseif ($field instanceof BooleanField) {
                 $instance->_setBooleanVal($param, $value);
@@ -802,11 +809,17 @@ abstract class AbstractInstance
             if ($field instanceof RelatedField) {
                 $getter = $field->getGetterForPrimitiveValue();
                 $items = $this->{$getter}();
-                $t = [];
-                foreach ($items as $item) {
-                    $t[] = $item->readAsRelated();
+
+                if ($field->isSingleMode()) {
+                    $r[$field->getName()] = $items->readAsRelated();
+
+                } else {
+                    $t = [];
+                    foreach ($items as $item) {
+                        $t[] = $item->readAsRelated();
+                    }
+                    $r[$field->getName()] = $t;
                 }
-                $r[$field->getName()] = $t;
 
             } elseif ($field instanceof ForeignKeysField) {
                 $getter = $field->getGetterForData();
@@ -867,7 +880,7 @@ abstract class AbstractInstance
                 }
                 $r[$field->getName()] = $t;
 
-            } else {
+            } elseif ($field instanceof AbstractField) {
                 $getter = $field->getGetterForPrimitiveValue();
                 $r[$field->getName()] = $this->{$getter}();
             }
