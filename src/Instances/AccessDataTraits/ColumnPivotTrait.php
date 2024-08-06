@@ -64,6 +64,9 @@ trait ColumnPivotTrait
         // Own fields
         $ownSchema = Schema::get(static::COMPONENT);
         $ownField = $ownSchema->getPivotField($column);
+        $ownIdColumn = $ownSchema->getIdColumn();
+        $ownIdColumn = reset($ownIdColumn);
+        $ownIdField = $ownSchema->getField($ownIdColumn);
 
         // Pivot table fields (intermediate table)
         $pivotSchema = $ownField->getPivotSchema();
@@ -74,21 +77,24 @@ trait ColumnPivotTrait
         // Referenced table
         $referencedSchema = Schema::get($ownField->getComponent());
         $referencedField = $referencedSchema->getField($referencedSchema->getIdColumn()[0]);
+        $referencedIdColumn = $referencedSchema->getIdColumn();
+        $referencedIdColumn = reset($referencedIdColumn);
+        $referencedIdField = $referencedSchema->getField($referencedIdColumn);
 
         // Prepare query builder
 
         /** @var Query $queryBuilder */
-        list($referencedQueryBuilder) = Instantiator::getQueryCaller($ownField->getComponent());
+        list($referencedQueryBuilder) = Instantiator::getQueryCaller($referencedSchema->getComponent());
 
         /** @var Query $pivotQueryBuilder */
         list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotSchema->getComponent());
 
         $pivotQueryBuilder
-            ->setColumns([$pivotOwnField->getColumn()])
+            ->setColumns([$pivotField->getColumn()])
             ->andIntegerEqual($pivotOwnField->getColumn(), $this->getIdColumnValue());
 
         $referencedQueryBuilder
-            ->andFieldNotInSubQuery($pivotOwnField->getColumn(), $pivotQueryBuilder)
+            ->andFieldNotInSubQuery($referencedSchema->getTable() . '.' . $referencedField->getColumn(), $pivotQueryBuilder)
         ;
 
         return $referencedQueryBuilder;
