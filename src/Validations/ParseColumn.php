@@ -45,6 +45,18 @@ class ParseColumn
      * @param $value
      * @return string
      */
+    public static function valueListToArray($value): string
+    {
+        $value = str_replace(':LKT_SLASH:', '\\', $value);
+        $value = str_replace(':LKT_QUESTION_MARK:', '?', $value);
+        $value = str_replace(':LKT_SINGLE_QUOTE:', "'", $value);
+        return trim(str_replace('\"', '"', $value));
+    }
+
+    /**
+     * @param $value
+     * @return string
+     */
     public static function HTMLDatumToDatabase($value): string
     {
         $value = str_replace('\\', ':LKT_SLASH:', $value);

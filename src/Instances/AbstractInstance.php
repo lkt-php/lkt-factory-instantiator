@@ -28,9 +28,11 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedKeysTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnRelatedTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringChoiceTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnValueListTrait;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
+use Lkt\Factory\Schemas\Exceptions\MissedMandatoryValueException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\BooleanField;
@@ -55,6 +57,7 @@ use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
 use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
+use Lkt\Factory\Schemas\Fields\ValueListField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\Locale\Locale;
 use Lkt\QueryBuilding\Query;
@@ -82,6 +85,7 @@ abstract class AbstractInstance
         ColumnIntegerChoiceTrait,
         ColumnEncryptTrait,
         ColumnRelatedKeysMergeTrait,
+        ColumnValueListTrait,
         ColumnConcatTrait;
 
     protected $TYPE;
@@ -276,6 +280,11 @@ abstract class AbstractInstance
                     $this->UPDATED[$fileField->getName()] = '';
                 }
             }
+        }
+
+        foreach ($schema->getMandatoryFields() as $mandatoryField) {
+            $checkerMethod = $mandatoryField->getGetterForChecker();
+            if (!$this->{$checkerMethod}()) throw MissedMandatoryValueException::getInstance($mandatoryField->getName());
         }
 
         $parsed = $connection->prepareDataToStore($schema, $this->UPDATED);
@@ -881,6 +890,20 @@ abstract class AbstractInstance
 
                 }
                 $r[$field->getName()] = $t;
+
+            } elseif ($field instanceof ValueListField) {
+                $getter = $field->getGetterForPrimitiveValue();
+
+                if ($field->readModeIsBoth()) {
+                    $r[$field->getName()] = $this->{$getter}();
+                    $r[$field->getName().'List'] = $this->{$getter.'AsArray'}();
+
+                } elseif ($field->readModeIsString()) {
+                    $r[$field->getName()] = $this->{$getter}();
+
+                } elseif ($field->readModeIsArray()) {
+                    $r[$field->getName()] = $this->{$getter.'AsArray'}();
+                }
 
             } elseif ($field instanceof AbstractField) {
                 $getter = $field->getGetterForPrimitiveValue();

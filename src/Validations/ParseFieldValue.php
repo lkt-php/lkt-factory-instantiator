@@ -31,6 +31,8 @@ class ParseFieldValue
     {
         if ($field instanceof HTMLField) return ParseColumn::HTMLDatumToInstance($value);
 
+        if ($field instanceof ValueListField) return ParseColumn::HTMLDatumToInstance($value);
+
         if ($field instanceof StringField
             || $field instanceof EmailField
             || $field instanceof ColorField

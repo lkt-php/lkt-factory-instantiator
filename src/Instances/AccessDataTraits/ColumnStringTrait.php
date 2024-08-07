@@ -3,6 +3,7 @@
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Schemas\Schema;
 
 trait ColumnStringTrait
 {
@@ -28,6 +29,17 @@ trait ColumnStringTrait
         $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
             $fieldName => $value,
         ], false);
+
+        $schema = Schema::get(static::COMPONENT);
+        $field = $schema->getField($fieldName);
+        if ($field->isUnique()) {
+            $setter = 'and' . ucfirst($fieldName) . 'Equal';
+            $builder = static::getQueryCaller()->{$setter}($value);
+            $result = static::getOne($builder);
+            if ($result instanceof static && $result->getIdColumnValue() !== $this->getIdColumnValue()) {
+                throw new \Exception('Duplicated value');
+            }
+        }
 
         foreach ($converter->parse() as $key => $value) {
             $this->UPDATED[$key] = $value;
