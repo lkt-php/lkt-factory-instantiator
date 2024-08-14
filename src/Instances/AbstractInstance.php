@@ -720,6 +720,9 @@ abstract class AbstractInstance
             if ($field instanceof StringChoiceField) {
                 $instance->_setStringChoiceVal($param, clearInput($value));
 
+            } elseif ($field instanceof ValueListField) {
+                $instance->_setValueListVal($param, $value);
+
             } elseif ($field instanceof StringField || $field instanceof EmailField || $field instanceof HTMLField) {
                 $instance->_setStringVal($param, clearInput($value));
 
@@ -822,6 +825,9 @@ abstract class AbstractInstance
                 if ($field->isSingleMode()) {
                     if (is_object($items)) {
                         $r[$field->getName()] = $items->readAsRelated();
+                    } elseif ($field->hasToReturnsEmptyOneInSingleMode()) {
+                        $anonymous = Instantiator::make($field->getComponent(), 0);
+                        $r[$field->getName()] = $anonymous->readAsRelated();
                     }
 
                 } else {
