@@ -62,14 +62,22 @@ trait ColumnForeignListTrait
 
         $r = [];
 
+        $idColumn = $schema->getIdColumn();
+        $idColumn = reset($idColumn);
+
         foreach ($items as $item) {
             if (is_numeric($item)) {
                 $t = Instantiator::make($field->getComponent(), $item);
                 if ($t instanceof AbstractInstance && !$t->isAnonymous()) {
                     $r[] = $t;
                 }
+
             } else {
-                $r[] = $item;
+                $t = Instantiator::make($field->getComponent(), null);
+                $t->setData([
+                    $idColumn => $item,
+                ]);
+                $r[] = $t;
             }
         }
 
