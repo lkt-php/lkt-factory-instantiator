@@ -125,6 +125,16 @@ abstract class AbstractInstance
 
     public function setData(array $initialData): static
     {
+        $schema = Schema::get(static::COMPONENT);
+
+        foreach ($initialData as $column => $datum) {
+            $field = $schema->getField($column);
+            if ($field && $field->hasDefaultValue()) {
+                $initialData[$column] = $field->ensureDefaultValue($initialData[$column]);
+            }
+        }
+
+
         $this->DATA = $initialData;
         return $this;
     }
