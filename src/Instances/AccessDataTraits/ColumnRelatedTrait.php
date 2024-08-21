@@ -172,7 +172,10 @@ trait ColumnRelatedTrait
         $order = $field->getOrder();
         if (!is_array($order)) $order = [];
 
-        $query->andRaw(implode(' AND ', $where));
+        if (count($where) > 0){
+            $query->andRaw(implode(' AND ', $where));
+        }
+
         $query->orderBy(implode(',', $order));
         $query->setForceRefresh($forceRefresh);
 
@@ -210,48 +213,14 @@ trait ColumnRelatedTrait
         $dataProcessor = new UpdatedRelatedDataProcessor(
             Schema::get(static::COMPONENT),
             $column,
-            $data
+            $data,
+            $this
         );
         $dataProcessor->processRelatedField();
 
         $this->PENDING_UPDATE_RELATED_DATA[$column] = $dataProcessor->pendingUpdateData;
         $this->UPDATED_RELATED_DATA[$column] = $dataProcessor->updatedData;
         return $this;
-
-//        $ownSchema = Schema::get(static::COMPONENT);
-//        $ownField = $ownSchema->getRelatedField($column);
-//
-//        if ($type === '') {
-//            $type = $ownField->getComponent();
-//        }
-//
-//        $schema = Schema::get($type);
-//        $relatedIdColumn = $schema->getIdColumn();
-//        if (count($relatedIdColumn) === 1) $relatedIdColumn = reset($relatedIdColumn);
-//        $relatedForeignKeyColumn = $schema->getField($ownField->getColumn());
-//        $relatedForeignKeyKey = $relatedForeignKeyColumn->getName();
-//
-//        $relatedClass = $schema->getInstanceSettings()->getAppClass();
-//
-//        $r = [];
-//
-//        foreach ($data as &$datum) {
-//            if (!$datum[$relatedIdColumn]) {
-//                $datum[$relatedForeignKeyKey] = $this->getIdColumnValue();
-//
-//                foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
-//                    if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
-//                }
-//            }
-//
-//            $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
-//            $instance->hydrate($datum);
-//            $r[] = $instance;
-//        }
-//
-//        $this->PENDING_UPDATE_RELATED_DATA[$column] = $data;
-//        $this->UPDATED_RELATED_DATA[$column] = $r;
-//        return $this;
     }
 
     protected function _getRelatedPage(string $type, string $fieldName, int $page = 1, Where $where = null)

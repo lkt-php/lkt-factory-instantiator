@@ -2,6 +2,7 @@
 
 namespace Lkt\Factory\Instantiator\Helpers;
 
+use Lkt\Factory\Instantiator\Instances\AbstractInstance;
 use Lkt\Factory\Schemas\Schema;
 
 class UpdatedRelatedDataProcessor
@@ -9,6 +10,7 @@ class UpdatedRelatedDataProcessor
     protected Schema $schema;
     protected string $fieldName = '';
     public array $data = [];
+    public AbstractInstance|null $referrer = null;
     public array $updatedData = [];
     public array $pendingUpdateData = [];
 
@@ -17,11 +19,12 @@ class UpdatedRelatedDataProcessor
     protected string $relatedComponent = '';
     protected string $relatedIdColumn = '';
 
-    public function __construct(Schema $schema, string $fieldName, array $data)
+    public function __construct(Schema $schema, string $fieldName, array $data, AbstractInstance $referrer)
     {
         $this->schema = $schema;
         $this->fieldName = $fieldName;
         $this->data = $data;
+        $this->referrer = $referrer;
     }
 
     public function processRelatedField()
@@ -43,6 +46,11 @@ class UpdatedRelatedDataProcessor
         foreach ($this->data as &$datum) {
             if (!$datum[$relatedIdColumn]) {
                 foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
+                    if (is_callable($relatedColumnValue)) {
+                        $relatedColumnValue = call_user_func_array($relatedColumnValue, [
+                            'referrer' => $this->referrer
+                        ]);
+                    }
                     if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
                 }
             }
@@ -79,6 +87,11 @@ class UpdatedRelatedDataProcessor
                 $datum[$relatedForeignKeyKey] = $this->getIdColumnValue();
 
                 foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
+                    if (is_callable($relatedColumnValue)) {
+                        $relatedColumnValue = call_user_func_array($relatedColumnValue, [
+                            'referrer' => $this->referrer
+                        ]);
+                    }
                     if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
                 }
             }

@@ -135,7 +135,8 @@ trait ColumnForeignListTrait
         $dataProcessor = new UpdatedRelatedDataProcessor(
             Schema::get(static::COMPONENT),
             $fieldName,
-            $data
+            $data,
+            $this
         );
         $dataProcessor->processRelatedField();
 
