@@ -869,6 +869,10 @@ abstract class AbstractInstance
                 $r[$field->getName()] = $item;
                 $r[$field->getName() . 'Id'] = $this->{$getterIds}();
 
+                if ($field->hasOnReadIncludeOptions()) {
+                    $r[$field->getName() . 'Opts'] = [$item];
+                }
+
             } elseif ($field instanceof MethodGetterField) {
                 $getter = $field->getName();
                 $r[$field->getColumn()] = $this->{$getter}();
