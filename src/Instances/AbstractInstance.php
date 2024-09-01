@@ -798,7 +798,7 @@ abstract class AbstractInstance
     {
         $schema = Schema::get(static::COMPONENT);
 
-        $r = $this->readFields($schema->getViewFields($view));
+        $r = $this->readFields($schema->getViewFields($view), $view);
 
         $schema = Schema::get(static::COMPONENT);
 
@@ -824,7 +824,7 @@ abstract class AbstractInstance
      * @param AbstractField[] $fields
      * @return array
      */
-    public function readFields(array $fields = []): array
+    public function readFields(array $fields = [], string $view = ''): array
     {
         $r = [];
         foreach ($fields as $field) {
@@ -834,10 +834,10 @@ abstract class AbstractInstance
 
                 if ($field->isSingleMode()) {
                     if (is_object($items)) {
-                        $r[$field->getName()] = $items->readAsRelated();
+                        $r[$field->getCustomViewName($view)] = $items->readAsRelated();
                     } elseif ($field->hasToReturnsEmptyOneInSingleMode()) {
                         $anonymous = Instantiator::make($field->getComponent(), 0);
-                        $r[$field->getName()] = $anonymous->readAsRelated();
+                        $r[$field->getCustomViewName($view)] = $anonymous->readAsRelated();
                     }
 
                 } else {
@@ -845,7 +845,7 @@ abstract class AbstractInstance
                     foreach ($items as $item) {
                         $t[] = $item->readAsRelated();
                     }
-                    $r[$field->getName()] = $t;
+                    $r[$field->getCustomViewName($view)] = $t;
                 }
 
             } elseif ($field instanceof ForeignKeysField) {
@@ -857,8 +857,8 @@ abstract class AbstractInstance
                 foreach ($items as $item) {
                     $t[] = $item->readAsRelated();
                 }
-                $r[$field->getName()] = $t;
-                $r[$field->getName() . 'Ids'] = $this->{$getterIds}();
+                $r[$field->getCustomViewName($view)] = $t;
+                $r[$field->getCustomViewName($view) . 'Ids'] = $this->{$getterIds}();
 
             } elseif ($field instanceof ForeignKeyField) {
                 $getter = $field->getGetterForData();
@@ -866,16 +866,20 @@ abstract class AbstractInstance
                 $item = $this->{$getter}();
                 if ($item) $item = $item->readAsRelated();
                 if (!$item) $item = [];
-                $r[$field->getName()] = $item;
-                $r[$field->getName() . 'Id'] = $this->{$getterIds}();
+                $r[$field->getCustomViewName($view)] = $item;
+                $r[$field->getCustomViewName($view) . 'Id'] = $this->{$getterIds}();
 
                 if ($field->hasOnReadIncludeOptions()) {
-                    $r[$field->getName() . 'Opts'] = [$item];
+                    $r[$field->getCustomViewName($view) . 'Opts'] = [$item];
                 }
 
             } elseif ($field instanceof MethodGetterField) {
                 $getter = $field->getName();
-                $r[$field->getColumn()] = $this->{$getter}();
+
+                $key = $field->getCustomViewName($view);
+                if (!$key) $key = $field->getColumn();
+
+                $r[$key] = $this->{$getter}();
 
             } elseif ($field instanceof FileField) {
                 $val = '';
@@ -883,7 +887,7 @@ abstract class AbstractInstance
                     $getter = $field->getGetterForPrimitiveValue().'PublicPath';
                     $val = $this->{$getter}();
                 }
-                $r[$field->getName()] = $val;
+                $r[$field->getCustomViewName($view)] = $val;
 
             } elseif ($field instanceof DateTimeField || $field instanceof UnixTimeStampField) {
                 $getter = $field->getGetterForPrimitiveValue();
@@ -892,10 +896,10 @@ abstract class AbstractInstance
                 if (!$format) $format = $field->getDefaultReadFormat();
 
                 if ($format !== '') {
-                    $r[$field->getName()] = $this->{$getter . 'Formatted'}($format);
+                    $r[$field->getCustomViewName($view)] = $this->{$getter . 'Formatted'}($format);
 
                 } else {
-                    $r[$field->getName()] = $this->{$getter}();
+                    $r[$field->getCustomViewName($view)] = $this->{$getter}();
                 }
 
             } elseif ($field instanceof PivotField) {
@@ -909,25 +913,25 @@ abstract class AbstractInstance
 
 
                 }
-                $r[$field->getName()] = $t;
+                $r[$field->getCustomViewName($view)] = $t;
 
             } elseif ($field instanceof ValueListField) {
                 $getter = $field->getGetterForPrimitiveValue();
 
                 if ($field->readModeIsBoth()) {
-                    $r[$field->getName()] = $this->{$getter}();
-                    $r[$field->getName().'List'] = $this->{$getter.'AsArray'}();
+                    $r[$field->getCustomViewName($view)] = $this->{$getter}();
+                    $r[$field->getCustomViewName($view).'List'] = $this->{$getter.'AsArray'}();
 
                 } elseif ($field->readModeIsString()) {
-                    $r[$field->getName()] = $this->{$getter}();
+                    $r[$field->getCustomViewName($view)] = $this->{$getter}();
 
                 } elseif ($field->readModeIsArray()) {
-                    $r[$field->getName()] = $this->{$getter.'AsArray'}();
+                    $r[$field->getCustomViewName($view)] = $this->{$getter.'AsArray'}();
                 }
 
             } elseif ($field instanceof AbstractField) {
                 $getter = $field->getGetterForPrimitiveValue();
-                $r[$field->getName()] = $this->{$getter}();
+                $r[$field->getCustomViewName($view)] = $this->{$getter}();
             }
         }
 
