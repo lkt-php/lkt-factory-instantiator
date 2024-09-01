@@ -61,6 +61,7 @@ use Lkt\Factory\Schemas\Fields\ValueListField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\Locale\Locale;
 use Lkt\QueryBuilding\Query;
+use Lkt\Translations\Translations;
 use function Lkt\Tools\Arrays\compareArrays;
 use function Lkt\Tools\Pagination\getTotalPages;
 use function Lkt\Tools\Parse\clearInput;
@@ -927,6 +928,15 @@ abstract class AbstractInstance
 
                 } elseif ($field->readModeIsArray()) {
                     $r[$field->getCustomViewName($view)] = $this->{$getter.'AsArray'}();
+                }
+
+            } elseif ($field instanceof StringChoiceField) {
+                $getter = $field->getGetterForPrimitiveValue();
+                $value = $this->{$getter}();
+                $r[$field->getCustomViewName($view)] = $value;
+                $i18nOptions = $field->getI18nViewOptions();
+                if ($i18nOptions !== '') {;
+                    $r[$field->getCustomViewName($view) . 'Text'] = Translations::get($i18nOptions . ".{$value}", Locale::getLangCode());
                 }
 
             } elseif ($field instanceof AbstractField) {
