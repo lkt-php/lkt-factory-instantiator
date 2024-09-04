@@ -269,6 +269,9 @@ abstract class AbstractInstance
                 $defaultValueKey = $fieldWithDefaultValue->getName();
                 if (isset($this->UPDATED[$defaultValueKey])) continue;
 
+                $defaultValueKey = $fieldWithDefaultValue->getName().'Id';
+                if (isset($this->UPDATED[$defaultValueKey])) continue;
+
                 $defaultValue = $fieldWithDefaultValue->getDefaultValue();
                 $setter = $fieldWithDefaultValue->getSetterForPrimitiveValue();
                 $this->{$setter}($defaultValue);
@@ -434,12 +437,12 @@ abstract class AbstractInstance
 
                     if ($datum[$relatedIdColumn] > 0) {
                         $ins = $relatedClass::getInstance($datum[$relatedIdColumn]);
-                        $ins::feedInstance($ins, $datum);
+                        $ins::feedInstance($ins, $datum, 'update');
                         $ins->save();
 
                     } else {
                         $ins = $relatedClass::getInstance();
-                        $ins::feedInstance($ins, $datum);
+                        $ins::feedInstance($ins, $datum, 'create');
                         $ins->save();
                     }
 
@@ -742,7 +745,7 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof ForeignKeyField) {
                 if ($field->keyIsId($param)) {
-                    $instance->_setIntegerVal($field->getName(), $value);
+                    $instance->_setIntegerVal($field->getName() . 'Id', $value);
 
                 } else {
 //                    $instance->_setForeignListWithData($param, $value);
