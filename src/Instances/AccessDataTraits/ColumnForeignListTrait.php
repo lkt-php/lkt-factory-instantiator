@@ -65,15 +65,27 @@ trait ColumnForeignListTrait
         $idColumn = $schema->getIdColumn();
         $idColumn = reset($idColumn);
 
+
+        $type = $field->getComponent();
+        $dynamicComponentFieldName = $field->getDynamicComponentField();
+        if ($dynamicComponentFieldName !== '') {
+            $dynamicComponentField = $schema->getField($dynamicComponentFieldName);
+            $getter = $dynamicComponentField->getGetterForPrimitiveValue();
+            $dynamicType = $this->{$getter}();
+            if ($dynamicType !== '') $type = $dynamicType;
+        }
+
+        if ($type === '') return [];
+
         foreach ($items as $item) {
             if (is_numeric($item)) {
-                $t = Instantiator::make($field->getComponent(), $item);
+                $t = Instantiator::make($type, $item);
                 if ($t instanceof AbstractInstance && !$t->isAnonymous()) {
                     $r[] = $t;
                 }
 
             } else {
-                $t = Instantiator::make($field->getComponent(), null);
+                $t = Instantiator::make($type, null);
                 $t->setData([
                     $idColumn => $item,
                 ]);

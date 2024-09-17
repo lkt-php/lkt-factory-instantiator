@@ -368,6 +368,8 @@ abstract class AbstractInstance
         if (count($this->PENDING_UPDATE_RELATED_DATA) > 0) {
             foreach ($this->PENDING_UPDATE_RELATED_DATA as $column => $data) {
 
+                if (!$isUpdate && count($data) === 0) continue;
+
                 /** @var RelatedField $field */
                 $field = $schema->getField($column);
                 $relatedComponent = $field->getComponent();

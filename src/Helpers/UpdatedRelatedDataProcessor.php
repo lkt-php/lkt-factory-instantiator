@@ -32,6 +32,21 @@ class UpdatedRelatedDataProcessor
         $ownField = $this->schema->getField($this->fieldName);
 
         $this->relatedComponent = $ownField->getComponent();
+        if (method_exists($ownField, 'getDynamicComponentField')) { // Check due to RelatedField not implementing this feature yet
+            $dynamicComponentFieldName = $ownField->getDynamicComponentField();
+            if ($dynamicComponentFieldName !== '') {
+                $dynamicComponentField = $this->schema->getField($dynamicComponentFieldName);
+                $getter = $dynamicComponentField->getGetterForPrimitiveValue();
+                $dynamicType = $this->referrer->{$getter}();
+                if ($dynamicType !== '') $this->relatedComponent = $dynamicType;
+            }
+        }
+
+        if ($this->relatedComponent === '') {
+            $this->pendingUpdateData = [];
+            $this->updatedData = [];
+            return;
+        }
 
         $relatedSchema = Schema::get($this->relatedComponent);
         $relatedIdColumn = $relatedSchema->getIdColumn();
@@ -71,6 +86,19 @@ class UpdatedRelatedDataProcessor
         $ownField = $this->schema->getField($this->fieldName);
 
         $relatedComponent = $ownField->getComponent();
+        $dynamicComponentFieldName = $ownField->getDynamicComponentField();
+        if ($dynamicComponentFieldName !== '') {
+            $dynamicComponentField = $this->schema->getField($dynamicComponentFieldName);
+            $getter = $dynamicComponentField->getGetterForPrimitiveValue();
+            $dynamicType = $this->referrer->{$getter}();
+            if ($dynamicType !== '') $relatedComponent = $dynamicType;
+        }
+
+        if ($relatedComponent === '') {
+            $this->pendingUpdateData = [];
+            $this->updatedData = [];
+            return;
+        }
 
         $relatedSchema = Schema::get($relatedComponent);
         $relatedIdColumn = $relatedSchema->getIdColumn();
