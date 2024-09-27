@@ -299,7 +299,21 @@ abstract class AbstractInstance
         foreach ($schema->getMandatoryFields() as $mandatoryField) {
             $checkerMethod = $mandatoryField->getGetterForChecker();
             if (!$this->{$checkerMethod}()) {
-                throw MissedMandatoryValueException::getInstance($schema->getComponent() . '.' .$mandatoryField->getName());
+                $additionalFieldsToColumn =  array_filter($schema->getFields(), function (AbstractField $field) use ($mandatoryField) {
+                    return $field->getName() !== $mandatoryField->getName()
+                        && $field->getColumn() === $mandatoryField->getColumn();
+                });
+                $ok = false;
+                if (count($additionalFieldsToColumn) > 0) {
+                    foreach ($additionalFieldsToColumn as $additionalFieldToColumn) {
+                        $additionalCheckerMethod = $additionalFieldToColumn->getGetterForChecker();
+                        $ok = $ok || $this->{$additionalCheckerMethod}();
+                    }
+                }
+
+                if (!$ok) {
+                    throw MissedMandatoryValueException::getInstance($schema->getComponent() . '.' .$mandatoryField->getName());
+                }
             }
         }
 

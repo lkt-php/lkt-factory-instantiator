@@ -49,7 +49,8 @@ class ParseFieldValue
 
         if ($field instanceof DateTimeField) return ParseColumn::dateTimeDatum($value);
 
-        if ($field instanceof JSONField) return ParseColumn::JSONDatumToInstance($value);
+        if ($field instanceof JSONField && !$field->isI18nJson()) return ParseColumn::JSONDatumToInstance($value);
+        elseif ($field instanceof JSONField && $field->isI18nJson()) return $value;
 
         if ($field instanceof FileField) return ParseColumn::fileDatumToInstance($value, $field);
         return null;

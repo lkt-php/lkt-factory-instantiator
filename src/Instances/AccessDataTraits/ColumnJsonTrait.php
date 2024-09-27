@@ -33,6 +33,14 @@ trait ColumnJsonTrait
             /** @var array $r */
             return $r;
         }
+
+
+        if (is_null($r)) {
+            return json_decode('{}');
+        }
+        if (is_string($r)) {
+            return json_decode($r);
+        }
         /** @var StdClass $r */
         $r = json_decode(json_encode($r));
         return $r;
