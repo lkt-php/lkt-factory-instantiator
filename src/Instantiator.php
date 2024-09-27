@@ -176,7 +176,8 @@ class Instantiator
 
         foreach ($updatedInstancesData as $id => $item) {
             $instance = Instantiator::make($component, $id);
-            $instance->hydrate($item)->save();
+            $instance::feedInstance($instance, $item);
+            $instance->save();
         }
     }
 }

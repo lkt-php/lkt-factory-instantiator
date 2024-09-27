@@ -60,25 +60,25 @@ class UpdatedRelatedDataProcessor
 
         foreach ($this->data as &$datum) {
             if (!$datum[$relatedIdColumn]) {
-                foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
-                    if (is_callable($relatedColumnValue)) {
-                        $relatedColumnValue = call_user_func_array($relatedColumnValue, [
-                            'referrer' => $this->referrer
-                        ]);
+                if (method_exists($ownField, 'getRelatedComponentFeeds')){
+                    foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
+                        if (is_callable($relatedColumnValue)) {
+                            $relatedColumnValue = call_user_func_array($relatedColumnValue, [
+                                'referrer' => $this->referrer
+                            ]);
+                        }
+                        if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
                     }
-                    if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
                 }
             }
 
             $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
-            $instance->hydrate($datum);
+            $instance::feedInstance($instance, $datum);
             $r[] = $instance;
         }
 
         $this->pendingUpdateData = $this->data;
         $this->updatedData = $r;
-
-
     }
 
     public function processForeignKeysField()
@@ -125,7 +125,7 @@ class UpdatedRelatedDataProcessor
             }
 
             $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
-            $instance->hydrate($datum);
+            $instance::feedInstance($instance, $datum);
             $r[] = $instance;
         }
 

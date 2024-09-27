@@ -298,7 +298,9 @@ abstract class AbstractInstance
 
         foreach ($schema->getMandatoryFields() as $mandatoryField) {
             $checkerMethod = $mandatoryField->getGetterForChecker();
-            if (!$this->{$checkerMethod}()) throw MissedMandatoryValueException::getInstance($mandatoryField->getName());
+            if (!$this->{$checkerMethod}()) {
+                throw MissedMandatoryValueException::getInstance($schema->getComponent() . '.' .$mandatoryField->getName());
+            }
         }
 
         $parsed = $connection->prepareDataToStore($schema, $this->UPDATED);
@@ -374,7 +376,22 @@ abstract class AbstractInstance
                 $field = $schema->getField($column);
                 $relatedComponent = $field->getComponent();
 
-                $relatedSchema = Schema::get($field->getComponent());
+                if ($field instanceof ForeignKeysField && count($data) === 0) {
+                    $currentItems = $this->_getForeignListData($column);
+                    if (count($currentItems) === 0) continue;
+                }
+
+                if (method_exists($field, 'getDynamicComponentField')) { // Check due to RelatedField not implementing this feature yet
+                    $dynamicComponentFieldName = $field->getDynamicComponentField();
+                    if ($dynamicComponentFieldName !== '') {
+                        $dynamicComponentField = $schema->getField($dynamicComponentFieldName);
+                        $getter = $dynamicComponentField->getGetterForPrimitiveValue();
+                        $dynamicType = $this->{$getter}();
+                        if ($dynamicType !== '') $relatedComponent = $dynamicType;
+                    }
+                }
+
+                $relatedSchema = Schema::get($relatedComponent);
 
                 $relatedIdColumn = $relatedSchema->getIdColumn()[0];
                 $relatedIdColumnGetter = 'get' . ucfirst($relatedIdColumn);
@@ -573,8 +590,8 @@ abstract class AbstractInstance
         InstanceCache::clearCode($cacheCode);
         $query = $connection->getSelectQuery($caller);
         QueryCache::set($connector, $query, []);
-        $this->setData([]);
-        $this->hydrate([]);
+        $this->DATA = [];
+        $this->UPDATED = [];
         $this->RELATED_DATA = [];
         $this->PIVOT = [];
         $this->PIVOT_DATA = [];
@@ -981,7 +998,7 @@ abstract class AbstractInstance
 
         // Additional data
         $fields = $schema->getRelatedModeAdditionalFields();
-        $r = [...$r, ...$this->readFields($fields)];
+        $r = [...$r, ...$this->readFields($fields, 'related')];
 
         return $r;
     }

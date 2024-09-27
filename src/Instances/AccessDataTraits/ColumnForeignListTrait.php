@@ -152,8 +152,12 @@ trait ColumnForeignListTrait
         );
         $dataProcessor->processRelatedField();
 
-        $this->PENDING_UPDATE_RELATED_DATA[$fieldName] = $dataProcessor->pendingUpdateData;
-        $this->UPDATED_RELATED_DATA[$fieldName] = $dataProcessor->updatedData;
+        if (count($dataProcessor->pendingUpdateData) > 0) {
+            $this->PENDING_UPDATE_RELATED_DATA[$fieldName] = $dataProcessor->pendingUpdateData;
+        }
+        if (count($dataProcessor->updatedData) > 0) {
+            $this->UPDATED_RELATED_DATA[$fieldName] = $dataProcessor->updatedData;
+        }
         return $this;
     }
 

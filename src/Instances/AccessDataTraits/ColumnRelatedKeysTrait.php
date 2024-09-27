@@ -135,7 +135,6 @@ trait ColumnRelatedKeysTrait
 
         $relatedSchema = Schema::get($field->getComponent());
 
-
         $relatedIdColumn = $relatedSchema->getIdColumn()[0];
         $relatedClass = $relatedSchema->getInstanceSettings()->getAppClass();
 
@@ -143,7 +142,7 @@ trait ColumnRelatedKeysTrait
 
         foreach ($data as $datum) {
             $instance = $relatedClass::getInstance($datum[$relatedIdColumn]);
-            $instance->hydrate($datum);
+            $instance::feedInstance($instance, $datum);
             $r[] = $instance;
         }
 
