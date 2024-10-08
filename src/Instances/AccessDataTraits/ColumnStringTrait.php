@@ -33,7 +33,7 @@ trait ColumnStringTrait
 
         $schema = Schema::get(static::COMPONENT);
         $field = $schema->getField($fieldName);
-        if ($field->isUnique()) {
+        if (method_exists($field, 'isUnique') && $field->isUnique()) {
             $setter = 'and' . ucfirst($fieldName) . 'Equal';
             $builder = static::getQueryCaller()->{$setter}($value);
             $result = static::getOne($builder);
