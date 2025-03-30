@@ -30,6 +30,7 @@ trait ColumnJsonTrait
         $field = $schema->getField($fieldName);
 
         if ($field->isAssoc()) {
+            if (is_string($r)) $r = json_decode($r, true);
             /** @var array $r */
             return $r;
         }
