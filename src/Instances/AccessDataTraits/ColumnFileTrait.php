@@ -124,9 +124,9 @@ trait ColumnFileTrait
         /** @var FileField $field */
         $field = $schema->getField($fieldName);
 
-        if ($field->hasPublicPath()) {
+        if ($field->hasPublicPath($this)) {
 //            $r = $field->getPublicPath() . '/' . $this->_getFileName($fieldName);
-            $r = $field->getPublicPath();
+            $r = $field->getPublicPath($this);
             $r = str_replace(':component', static::COMPONENT, $r);
             $r = str_replace(':field', $fieldName, $r);
             $r = str_replace(':id', $this->getIdColumnValue(), $r);
