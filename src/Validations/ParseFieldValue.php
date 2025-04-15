@@ -27,7 +27,7 @@ class ParseFieldValue
      * @param $value
      * @return array|bool|Carbon|File|float|int|string|null
      */
-    public static function parse(AbstractField $field, $value = null)
+    public static function parse(AbstractField $field, $value = null, $instance = null)
     {
         if ($field instanceof HTMLField) return ParseColumn::HTMLDatumToInstance($value);
 
@@ -52,7 +52,7 @@ class ParseFieldValue
         if ($field instanceof JSONField && !$field->isI18nJson()) return ParseColumn::JSONDatumToInstance($value);
         elseif ($field instanceof JSONField && $field->isI18nJson()) return $value;
 
-        if ($field instanceof FileField) return ParseColumn::fileDatumToInstance($value, $field);
+        if ($field instanceof FileField) return ParseColumn::fileDatumToInstance($value, $field, $instance);
         return null;
     }
 }

@@ -146,12 +146,12 @@ class ParseColumn
      * @param FileField $field
      * @return File|null
      */
-    public static function fileDatumToInstance($value, FileField $field):? File
+    public static function fileDatumToInstance($value, FileField $field, $instance = null):? File
     {
         $value = trim($value);
         if ($value === '') return null;
 
-        $directory = new Directory(FileSystemConnection::getDiskDriver(), $field->getStorePath());
+        $directory = new Directory(FileSystemConnection::getDiskDriver(), $field->getStorePath($instance));
         return new File(FileSystemConnection::getDiskDriver(), $directory, $value);
     }
 }

@@ -18,6 +18,7 @@ final class RawResultsToInstanceConverter
     protected $data;
     protected $schema;
     protected $allFields = true;
+    protected $instance;
 
     /**
      * @param string $component
@@ -26,12 +27,13 @@ final class RawResultsToInstanceConverter
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    public function __construct(string $component, array $data, bool $allFields = true)
+    public function __construct(string $component, array $data, bool $allFields = true, $instance = null)
     {
         $this->component = new ComponentValue($component);
         $this->schema = Schema::get($this->component->getValue());
         $this->allFields = $allFields;
         $this->data = $data;
+        $this->instance = $instance;
     }
 
     /**
@@ -70,7 +72,7 @@ final class RawResultsToInstanceConverter
             }
 
             $originalValue = isset($data[$searchKey]) ? $data[$searchKey] : null;
-            $value = ParseFieldValue::parse($field, $originalValue);
+            $value = ParseFieldValue::parse($field, $originalValue, $this->instance);
 
             if ($allFields || isset($data[$searchKey])) {
                 $result[$storeKey] = $value;

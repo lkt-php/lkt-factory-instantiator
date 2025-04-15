@@ -285,7 +285,7 @@ abstract class AbstractInstance
             $fileFields = $schema->getFileFields();
             foreach ($fileFields as $fileField) {
                 if ($this->_fileValUpdatedWithBase64Data($fileField->getName())) {
-                    $storePath = $fileField->getStorePath();
+                    $storePath = $fileField->getStorePath($this);
                     if ($storePath === ''){
                         throw UnsetFieldStorePathException::getInstance($fileField->getName(), $schema->getComponent());
                     }

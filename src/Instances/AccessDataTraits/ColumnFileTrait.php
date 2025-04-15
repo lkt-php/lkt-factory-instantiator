@@ -57,7 +57,7 @@ trait ColumnFileTrait
         } else {
             $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
                 $fieldName => $value,
-            ], false);
+            ], false, $this);
 
             foreach ($converter->parse() as $key => $value) {
                 $this->UPDATED[$key] = $value;
@@ -90,7 +90,7 @@ trait ColumnFileTrait
 
         $schema = Schema::get(static::COMPONENT);
         $field = $schema->getFileField($fieldName);
-        $storePath = $field->getStorePath();
+        $storePath = $field->getStorePath($this);
 
         $component = static::COMPONENT;
         $storeName = "$component-$id-$fieldName.$ext";
