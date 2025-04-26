@@ -715,7 +715,8 @@ abstract class AbstractInstance
     {
         if (!$queryCaller) $queryCaller = static::getQueryCaller();
         $schema = Schema::get(static::COMPONENT);
-        $limit = $schema->getItemsPerPage();
+        $limit = $queryCaller->getLimit();
+        if ($limit <= 0) $limit = $schema->getItemsPerPage();
         if ($limit >= 0) $queryCaller->pagination($page, $limit);
         return Instantiator::makeResults(static::COMPONENT, $queryCaller->selectDistinct());
     }
