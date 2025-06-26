@@ -30,6 +30,9 @@ class UpdatedRelatedDataProcessor
     public function processRelatedField()
     {
         $ownField = $this->schema->getField($this->fieldName);
+        if (!is_object($ownField)) {
+            return;
+        }
 
         $this->relatedComponent = $ownField->getComponent();
         if (method_exists($ownField, 'getDynamicComponentField')) { // Check due to RelatedField not implementing this feature yet
