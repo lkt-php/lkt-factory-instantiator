@@ -75,6 +75,24 @@ class ParseColumn
 
     /**
      * @param $value
+     * @return int[]
+     */
+    public static function integerArrayDatum($value): array
+    {
+        if (is_null($value)) return [];
+        if (is_string($value)) {
+            $value = explode(';', $value);
+        }
+        if (!is_array($value)) $value = [$value];
+        $r = [];
+        foreach ($value as $item) {
+            $r[] = (int)$item;
+        }
+        return $r;
+    }
+
+    /**
+     * @param $value
      * @return float
      */
     public static function floatDatum($value): float

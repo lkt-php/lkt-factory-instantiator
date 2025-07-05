@@ -784,11 +784,17 @@ abstract class AbstractInstance
                 } else {
 //                    $instance->_setForeignListWithData($param, $value);
                 }
-            } elseif ($field instanceof IntegerChoiceField) {
+            } elseif ($field instanceof IntegerChoiceField && !$field->isMultiple()) {
                 $instance->_setIntegerChoiceVal($param, (int)$value);
 
-            } elseif ($field instanceof IntegerField && !($field instanceof IdField)) {
+            } elseif ($field instanceof IntegerChoiceField) {
+                $instance->_setIntegerChoiceVal($param, $value);
+
+            } elseif ($field instanceof IntegerField && !($field instanceof IdField) && !$field->isMultiple()) {
                 $instance->_setIntegerVal($param, (int)$value);
+
+            } elseif ($field instanceof IntegerField && $field->isMultiple()) {
+                $instance->_setIntegerVal($param, $value);
 
             } elseif ($field instanceof FloatField) {
                 $instance->_setFloatVal($param, (float)$value);

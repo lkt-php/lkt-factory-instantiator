@@ -14,7 +14,7 @@ trait ColumnIntegerChoiceTrait
         if (isset($this->UPDATED[$fieldName])) {
             return $this->UPDATED[$fieldName];
         }
-        return trim($this->DATA[$fieldName]);
+        return (int)$this->DATA[$fieldName];
     }
 
     protected function _hasIntegerChoiceVal(string $fieldName): bool
@@ -38,15 +38,23 @@ trait ColumnIntegerChoiceTrait
         return $value === $compared;
     }
 
-    protected function _setIntegerChoiceVal(string $fieldName, int $value = null): static
+    protected function _setIntegerChoiceVal(string $fieldName, int|array $value = null): static
     {
         $schema = Schema::get(static::COMPONENT);
         /** @var IntegerChoiceField $field */
         $field = $schema->getField($fieldName);
         $availableOptions = $field->getAllowedOptions();
 
-        if (!in_array($value, $availableOptions, true)) {
-            throw InvalidIntegerChoiceValueException::getInstance($value, $fieldName, static::COMPONENT);
+        if (is_array($value)) {
+            foreach ($value as $val) {
+                if (!in_array($val, $availableOptions, true)) {
+                    throw InvalidIntegerChoiceValueException::getInstance($val, $fieldName, static::COMPONENT);
+                }
+            }
+        } else {
+            if (!in_array($value, $availableOptions, true)) {
+                throw InvalidIntegerChoiceValueException::getInstance($value, $fieldName, static::COMPONENT);
+            }
         }
 
         $converter = new RawResultsToInstanceConverter(static::COMPONENT, [

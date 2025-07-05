@@ -41,7 +41,8 @@ class ValidateFieldValue
 
         if ($field instanceof BooleanField) return (bool)$value === true;
 
-        if ($field instanceof IntegerField) return (int)$value > 0;
+        if ($field instanceof IntegerField && $field->isMultiple()) return is_array($value) && count($value) > 0;
+        else if ($field instanceof IntegerField) return (int)$value > 0;
 
         if ($field instanceof FloatField) return (float)$value > 0;
 

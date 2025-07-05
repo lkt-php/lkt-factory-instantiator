@@ -41,6 +41,7 @@ class ParseFieldValue
 
         if ($field instanceof BooleanField) return ParseColumn::booleanDatum($value);
 
+        if ($field instanceof IntegerField && $field->isMultiple()) return ParseColumn::integerArrayDatum($value);
         if ($field instanceof IntegerField) return ParseColumn::integerDatum($value);
 
         if ($field instanceof FloatField) return ParseColumn::floatDatum($value);
