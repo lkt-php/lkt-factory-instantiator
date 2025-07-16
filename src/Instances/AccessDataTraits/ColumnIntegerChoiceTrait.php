@@ -9,12 +9,16 @@ use Lkt\Factory\Schemas\Schema;
 
 trait ColumnIntegerChoiceTrait
 {
-    protected function _getIntegerChoiceVal(string $fieldName): int
+    protected function _getIntegerChoiceVal(string $fieldName): int|array
     {
-        if (isset($this->UPDATED[$fieldName])) {
-            return $this->UPDATED[$fieldName];
-        }
-        return (int)$this->DATA[$fieldName];
+        $schema = Schema::get(static::COMPONENT);
+        /** @var IntegerField $field */
+        $field = $schema->getField($fieldName);
+
+        if (isset($this->UPDATED[$fieldName])) return $this->UPDATED[$fieldName];
+        if (isset($this->DATA[$fieldName])) return $this->DATA[$fieldName];
+        if ($field->isMultiple()) return [];
+        return 0;
     }
 
     protected function _hasIntegerChoiceVal(string $fieldName): bool
@@ -28,12 +32,40 @@ trait ColumnIntegerChoiceTrait
 
     protected function _integerChoiceIn(string $fieldName, array $values): bool
     {
+        $schema = Schema::get(static::COMPONENT);
+        /** @var IntegerField $field */
+        $field = $schema->getField($fieldName);
+
+        if ($field->isMultiple()) {
+            /** @var int[] $value */
+            $value = $this->_getIntegerChoiceVal($fieldName);
+            if (count($value) === 0) return false;
+
+            $r = true;
+            foreach ($value as $val) {
+                $r = $r && in_array($val, $values, true);
+            }
+
+            return $r;
+        }
+
         $value = $this->_getIntegerChoiceVal($fieldName);
         return in_array($value, $values, true);
     }
 
-    protected function _integerChoiceEqual(string $fieldName, int $compared): bool
+    protected function _integerChoiceEqual(string $fieldName, int|array $compared): bool
     {
+        $schema = Schema::get(static::COMPONENT);
+        /** @var IntegerField $field */
+        $field = $schema->getField($fieldName);
+
+        if ($field->isMultiple()) {
+            /** @var int[] $value */
+            $value = $this->_getIntegerChoiceVal($fieldName);
+            return count($value) === count($compared)
+                && count(array_intersect($value, $compared)) === 0;
+        }
+
         $value = $this->_getIntegerChoiceVal($fieldName);
         return $value === $compared;
     }
