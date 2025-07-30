@@ -8,6 +8,7 @@ use Lkt\Connectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
+use Lkt\Factory\Instantiator\Enums\CrudOperation;
 use Lkt\Factory\Instantiator\Exceptions\UnsetFieldStorePathException;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
@@ -742,17 +743,42 @@ abstract class AbstractInstance
         return isset($this->PAGES_TOTAL[$fieldName]);
     }
 
+    protected function prepareCrudData(array $data, CrudOperation|null $operation = null): array
+    {
+        return $data;
+    }
+
+    protected function patchReadData(array $data): array
+    {
+        return $data;
+    }
+
+    public function autoRead(): array
+    {
+        $fields = Schema::get(static::COMPONENT)->getFields();
+        return $this->patchReadData($this->readFields($fields));
+    }
+
+    public function autoCreate(array $data): static
+    {
+        static::feedInstance($this, $this->prepareCrudData($data, CrudOperation::Create), CrudOperation::Create->value);
+        return $this->save();
+    }
+
+    public function autoUpdate(array $data): static
+    {
+        static::feedInstance($this, $this->prepareCrudData($data, CrudOperation::Update), CrudOperation::Update->value);
+        return $this->save();
+    }
+
     public static function create(array $params): static
     {
-        $instance = new static();
-        static::feedInstance($instance, $params);
-        return $instance->save();
+        return (new static())->autoCreate($params);
     }
 
     public static function update(AbstractInstance $instance, array $params): static
     {
-        static::feedInstance($instance, $params);
-        return $instance->save();
+        return $instance->autoUpdate($params);
     }
 
     public static function feedInstance(AbstractInstance $instance, array $params, string $view = ''): static
