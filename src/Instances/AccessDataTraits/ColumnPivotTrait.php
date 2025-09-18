@@ -315,4 +315,81 @@ trait ColumnPivotTrait
     {
         return count($this->_getPivotVal($column)) > 0;
     }
+
+    protected function _getPivotTablePositionQueryBuilder(string $fieldName)
+    {
+        // Schema detection
+        $schema = Schema::get(static::COMPONENT);
+        $ownField = $schema->getField($fieldName);
+        /** @var Schema $pivotSchema */
+        $pivotSchema = $ownField->getPivotSchema();
+
+        // Position detection
+        $positionField = $pivotSchema->getOnePositionField();
+        $query = Query::table($pivotSchema->getTable());
+        $query->setColumns(["MAX({$positionField->getColumn()}) as lkt_position"]);
+
+        // Filter only to this element
+        $ownInstanceIdentifierFieldName = $schema->getIdColumn();
+
+        // Get related column at pivot table pointing to this schema
+        $pivotFieldPointingToMe = $pivotSchema->getOneFieldPointingToComponent(static::COMPONENT);
+
+        $query
+            ->andStringEqual($pivotFieldPointingToMe->getColumn(), $this->DATA[$ownInstanceIdentifierFieldName[0]]);
+
+        $query->orderBy("{$positionField->getColumn()} ASC");
+
+        return $query;
+    }
+
+    protected function _getPivotTableInsertQueryBuilder(string $fieldName, mixed $relatedId, int $latestPosition)
+    {
+        // Schema detection
+        $schema = Schema::get(static::COMPONENT);
+        $ownField = $schema->getField($fieldName);
+        /** @var Schema $pivotSchema */
+        $pivotSchema = $ownField->getPivotSchema();
+
+        // Position detection
+        $positionField = $pivotSchema->getOnePositionField();
+        $query = Query::table($pivotSchema->getTable());
+
+        // Filter only to this element
+        $ownInstanceIdentifierFieldName = $schema->getIdColumn();
+
+        // Get related column at pivot table pointing to this schema
+        $pivotFieldPointingToMe = $pivotSchema->getOneFieldPointingToComponent(static::COMPONENT);
+
+        // Prepare data
+        $data = [
+            $positionField->getColumn() => $latestPosition + 1
+        ];
+        $data[$pivotFieldPointingToMe->getColumn()] = $this->DATA[$ownInstanceIdentifierFieldName[0]];
+
+        // Get related column at pivot table pointing the other schema
+        $fields = array_filter($pivotSchema->getRelationalFields(), function ($field) use ($pivotFieldPointingToMe) {
+            return $field->getColumn() !== $pivotFieldPointingToMe->getColumn();
+        });
+        /** @var PivotRightIdField $pivotFieldPointingToReferencedTable */
+        $pivotFieldPointingToReferencedTable = reset($fields);
+//        $referencedSchema = Schema::get($pivotFieldPointingToReferencedTable->getComponent());
+//
+//        $referencedIdentifierFieldName = $schema->getIdColumn();
+        $data[$pivotFieldPointingToReferencedTable->getColumn()] = $relatedId;
+
+
+        $query->updateData($data);
+
+        return $query;
+    }
+
+    protected function _addPivotRelation(string $fieldName, mixed $relatedId): bool
+    {
+        $positionQuery = $this->_getPivotTablePositionQueryBuilder($fieldName);
+        $latestPosition = $positionQuery->select()[0]['lkt_position'];
+
+        $insertQuery = $this->_getPivotTableInsertQueryBuilder($fieldName, $relatedId, $latestPosition);
+        return $insertQuery->insert();
+    }
 }
