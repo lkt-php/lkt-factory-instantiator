@@ -40,6 +40,7 @@ use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
 use Lkt\Factory\Schemas\Fields\EmailField;
+use Lkt\Factory\Schemas\Fields\EncryptField;
 use Lkt\Factory\Schemas\Fields\FileField;
 use Lkt\Factory\Schemas\Fields\FloatField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
@@ -802,6 +803,9 @@ abstract class AbstractInstance
 
             } elseif ($field instanceof DateTimeField) {
                 $instance->_setDateTimeVal($param, $value);
+
+            } elseif ($field instanceof EncryptField) {
+                $instance->_setEncryptVal($param, $value);
 
             } elseif ($field instanceof ForeignKeyField) {
                 if ($field->keyIsId($param)) {
