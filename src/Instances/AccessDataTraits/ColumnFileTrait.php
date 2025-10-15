@@ -66,6 +66,18 @@ trait ColumnFileTrait
         return $this;
     }
 
+    /**
+     * @param string $fieldName
+     * @param string|null $value
+     * @throws InvalidComponentException
+     * @throws SchemaNotDefinedException
+     */
+    protected function _setFileValWithHttpFile(string $fieldName, array $value = null): static
+    {
+        $this->UPLOADING_FILES[$fieldName] = $value;
+        return $this;
+    }
+
     protected function _fileValUpdatedWithBase64Data(string $fieldName): bool
     {
         $src = $this->UPDATED[$fieldName] instanceof File ? $this->UPDATED[$fieldName]->path : trim($this->UPDATED[$fieldName]);
@@ -146,6 +158,16 @@ trait ColumnFileTrait
         return trim($file->name);
     }
 
+    public function parseFileName(string $name, FileField $field): string
+    {
+        $fieldName = $field->getName();
+        $r = str_replace(':component', static::COMPONENT, $name);
+        $r = str_replace(':field', $fieldName, $r);
+        $r = str_replace(':id', $this->getIdColumnValue(), $r);
+        $r = str_replace(':value', $this->_getFileName($fieldName), $r);
+        return $r;
+    }
+
     /**
      * @param string $fieldName
      * @param string $src
@@ -166,5 +188,65 @@ trait ColumnFileTrait
     {
         $schema = Schema::get(static::COMPONENT);
         return $schema->getFileField($fieldName);
+    }
+
+    /**
+     * @param string $fieldName
+     * @return FileField|null
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getFileContent(string $fieldName): ?string
+    {
+        $schema = Schema::get(static::COMPONENT);
+        /** @var FileField $field */
+        $field = $schema->getField($fieldName);
+
+        $name = $this->_getFileName($fieldName);
+        return file_get_contents($field->getStorePath().'/'.$name);
+    }
+
+    /**
+     * @param string $fieldName
+     * @return FileField|null
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getFileExtension(string $fieldName): ?string
+    {
+        $schema = Schema::get(static::COMPONENT);
+        /** @var FileField $field */
+        $field = $schema->getField($fieldName);
+
+        $name = $this->_getFileName($fieldName);
+        return file_get_contents($field->getStorePath().'/'.$name);
+    }
+
+    /**
+     * @param string $fieldName
+     * @return FileField|null
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getFileLastModified(string $fieldName): false|int
+    {
+        $schema = Schema::get(static::COMPONENT);
+        /** @var FileField $field */
+        $field = $schema->getField($fieldName);
+
+        $name = $this->_getFileName($fieldName);
+        return filemtime($field->getStorePath().'/'.$name);
+    }
+
+    /**
+     * @param string $fieldName
+     * @return FileField|null
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getFileSize(string $fieldName): false|int
+    {
+        $schema = Schema::get(static::COMPONENT);
+        /** @var FileField $field */
+        $field = $schema->getField($fieldName);
+
+        $name = $this->_getFileName($fieldName);
+        return filesize($field->getStorePath().'/'.$name);
     }
 }

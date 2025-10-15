@@ -10,6 +10,7 @@ use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Enums\CrudOperation;
 use Lkt\Factory\Instantiator\Exceptions\UnsetFieldStorePathException;
+use Lkt\Factory\Instantiator\Helpers\FileUploadHelper;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnConcatTrait;
@@ -94,6 +95,7 @@ abstract class AbstractInstance
     protected $TYPE;
     protected array $DATA = [];
     protected array $UPDATED = [];
+    protected array $UPLOADING_FILES = [];
     protected array $PIVOT = [];
     protected array $PIVOT_DATA = [];
     protected array $UPDATED_PIVOT_DATA = [];
@@ -281,10 +283,11 @@ abstract class AbstractInstance
         }
 
 
-        $pendingUploadFiles = [];
+        $fileFields = $schema->getFileFields();
+
+        $pendingUploadBase64Files = [];
         if (count($this->UPDATED) > 0) {
             // Check if it's needed to store a base64 file:
-            $fileFields = $schema->getFileFields();
             foreach ($fileFields as $fileField) {
                 if ($this->_fileValUpdatedWithBase64Data($fileField->getName())) {
                     $storePath = $fileField->getStorePath($this);
@@ -292,7 +295,7 @@ abstract class AbstractInstance
                         throw UnsetFieldStorePathException::getInstance($fileField->getName(), $schema->getComponent());
                     }
 
-                    $pendingUploadFiles[$fileField->getName()] = $this->UPDATED[$fileField->getName()];
+                    $pendingUploadBase64Files[$fileField->getName()] = $this->UPDATED[$fileField->getName()];
                     $this->UPDATED[$fileField->getName()] = '';
                 }
             }
@@ -375,10 +378,26 @@ abstract class AbstractInstance
 
         $hasToReUpdate = false;
 
-        if (count($pendingUploadFiles) > 0) {
-            foreach ($pendingUploadFiles as $fileFieldName => $fileFieldValue) {
+        if (count($pendingUploadBase64Files) > 0) {
+            foreach ($pendingUploadBase64Files as $fileFieldName => $fileFieldValue) {
                 $this->_storeBase64DataAsFile($fileFieldName, $fileFieldValue, $id);
                 $hasToReUpdate = true;
+            }
+        }
+
+        if (count($this->UPLOADING_FILES) > 0) {
+            // Check if it's needed to store a base64 file:
+            foreach ($fileFields as $fileField) {
+                $key = $fileField->getName();
+                if (is_array($this->UPLOADING_FILES[$key])) {
+                    $uploadData = FileUploadHelper::uploadFileField($fileField, $this->UPLOADING_FILES[$key], $this, $schema);
+
+                    if (is_array($uploadData)) {
+                        $this->_setFileVal($key, $uploadData['name']);
+                        $hasToReUpdate = true;
+                    }
+                    unset($this->UPLOADING_FILES[$key]);
+                }
             }
         }
 
