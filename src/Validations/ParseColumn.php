@@ -172,4 +172,26 @@ class ParseColumn
         $directory = new Directory(FileSystemConnection::getDiskDriver(), $field->getStorePath($instance));
         return new File(FileSystemConnection::getDiskDriver(), $directory, $value);
     }
+
+    /**
+     * @param $value
+     * @param FileField $field
+     * @return File[]
+     */
+    public static function multipleFileDatumToInstance($value, FileField $field, $instance = null): array
+    {
+
+        if (is_null($value)) return [];
+        if (is_string($value)) {
+            $value = explode(';', $value);
+        }
+        if (!is_array($value)) $value = [$value];
+        $r = [];
+        foreach ($value as $item) {
+            $directory = new Directory(FileSystemConnection::getDiskDriver(), $field->getStorePath($instance));
+            $r[] = new File(FileSystemConnection::getDiskDriver(), $directory, $item);
+        }
+
+        return $r;
+    }
 }

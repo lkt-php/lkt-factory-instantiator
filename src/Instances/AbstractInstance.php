@@ -286,6 +286,7 @@ abstract class AbstractInstance
         $fileFields = $schema->getFileFields();
 
         $pendingUploadBase64Files = [];
+        $pendingUploadBase64MultipleFiles = [];
         if (count($this->UPDATED) > 0) {
             // Check if it's needed to store a base64 file:
             foreach ($fileFields as $fileField) {
@@ -295,8 +296,14 @@ abstract class AbstractInstance
                         throw UnsetFieldStorePathException::getInstance($fileField->getName(), $schema->getComponent());
                     }
 
-                    $pendingUploadBase64Files[$fileField->getName()] = $this->UPDATED[$fileField->getName()];
-                    $this->UPDATED[$fileField->getName()] = '';
+                    if ($fileField->isMultiple()) {
+                        $pendingUploadBase64MultipleFiles[$fileField->getName()] = $this->UPDATED[$fileField->getName()];
+                        $this->UPDATED[$fileField->getName()] = [];
+
+                    } else {
+                        $pendingUploadBase64Files[$fileField->getName()] = $this->UPDATED[$fileField->getName()];
+                        $this->UPDATED[$fileField->getName()] = '';
+                    }
                 }
             }
         }
@@ -381,6 +388,13 @@ abstract class AbstractInstance
         if (count($pendingUploadBase64Files) > 0) {
             foreach ($pendingUploadBase64Files as $fileFieldName => $fileFieldValue) {
                 $this->_storeBase64DataAsFile($fileFieldName, $fileFieldValue, $id);
+                $hasToReUpdate = true;
+            }
+        }
+
+        if (count($pendingUploadBase64MultipleFiles) > 0) {
+            foreach ($pendingUploadBase64MultipleFiles as $fileFieldName => $fileFieldValue) {
+                $this->_storeBase64DataAsFiles($fileFieldName, $fileFieldValue, $id);
                 $hasToReUpdate = true;
             }
         }

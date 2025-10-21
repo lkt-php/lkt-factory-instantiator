@@ -52,7 +52,8 @@ class ValidateFieldValue
 
         if ($field instanceof JSONField)  return $value !== null;
 
-        if ($field instanceof FileField) return $value !== null;
+        if ($field instanceof FileField && $field->isMultiple()) return is_array($value) && count($value) > 0;
+        elseif ($field instanceof FileField) return $value !== null;
         return false;
     }
 }
