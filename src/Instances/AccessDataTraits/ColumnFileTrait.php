@@ -66,7 +66,24 @@ trait ColumnFileTrait
         $field = $schema->getField($fieldName);
 
         if ($field->isMultiple()) {
-            $this->UPDATED[$fieldName] = $value;
+
+            $raw = $this->_getFileVal($fieldName);
+            $current = $this->_getPublicPath($fieldName);
+            $parsed = [];
+            foreach ($value as $v) {
+                $p = array_search($v, $current);
+                if ($p !== false) {
+                    if ($raw[$p] instanceof File) {
+                        $parsed[] = $raw[$p]->name;
+                    } else {
+                        $parsed[] = $raw[$p];
+                    }
+                } else {
+                    $parsed[] = $v;
+                }
+            }
+
+            $this->UPDATED[$fieldName] = $parsed;
             return $this;
         }
 
