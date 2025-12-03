@@ -728,12 +728,12 @@ abstract class AbstractInstance
     /**
      * @throws SchemaNotDefinedException
      */
-    public static function getAmountOfPages(Query $queryCaller = null, string $countableField = null): int
+    public static function getAmountOfPages(Query $queryCaller = null, string $countableField = null, int $itemsPerPage = 0): int
     {
         $total = static::getCount($queryCaller, $countableField);
         if ($total === 0) return 0;
         $schema = Schema::get(static::COMPONENT);
-        $itemsPerPage = $schema->getItemsPerPage();
+        if ($itemsPerPage <= 0) $itemsPerPage = $schema->getItemsPerPage();
         if ($itemsPerPage <= 0) return 0;
         return getTotalPages($total, $itemsPerPage);
     }
