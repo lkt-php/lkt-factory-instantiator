@@ -815,7 +815,7 @@ abstract class AbstractInstance
 
         if (!$query) $query = static::getQueryBuilder();
 
-        $query->setColumns(SelectBuilder::yearMonthDatum($countableField, 'countable_datum'));
+        $query->setColumns(SelectBuilder::extractYearMonthDatum($countableField, 'countable_datum'));
 
         $results = $query->selectDistinct();
 
