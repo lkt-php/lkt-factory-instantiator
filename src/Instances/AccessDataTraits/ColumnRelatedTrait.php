@@ -3,6 +3,7 @@
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\Connectors\DatabaseConnector;
+use Lkt\Factory\Instantiator\Helpers\QueryBuilderHelper;
 use Lkt\Factory\Instantiator\Helpers\UpdatedRelatedDataProcessor;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
@@ -106,11 +107,12 @@ trait ColumnRelatedTrait
         $schema = Schema::get(static::COMPONENT);
         $field = $schema->getRelatedField($column);
 
-        /**
-         * @var Query $builder
-         * @var DatabaseConnector $connection
-         */
-        list($builder) = Instantiator::getQueryCaller($field->getComponent());
+        $builder = QueryBuilderHelper::getComponentQuery($field->getComponent());
+//        /**
+//         * @var Query $builder
+//         * @var DatabaseConnector $connection
+//         */
+//        list($builder) = Instantiator::getQueryCaller($field->getComponent());
 
         return $this->_prepareQuery($builder, $schema, $field, $forceRefresh);
     }

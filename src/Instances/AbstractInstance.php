@@ -4,13 +4,14 @@ namespace Lkt\Factory\Instantiator\Instances;
 
 use Exception;
 use Lkt\Connectors\Cache\QueryCache;
-use Lkt\Connectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Cache\InstanceCache;
 use Lkt\Factory\Instantiator\Conversions\InstanceToArray;
 use Lkt\Factory\Instantiator\Conversions\RawResultsToInstanceConverter;
 use Lkt\Factory\Instantiator\Enums\CrudOperation;
+use Lkt\Factory\Instantiator\Exceptions\InvalidCountableFieldException;
 use Lkt\Factory\Instantiator\Exceptions\UnsetFieldStorePathException;
 use Lkt\Factory\Instantiator\Helpers\FileUploadHelper;
+use Lkt\Factory\Instantiator\Helpers\QueryBuilderHelper;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnConcatTrait;
@@ -32,6 +33,8 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringChoiceTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnStringTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnValueListTrait;
 use Lkt\Factory\Instantiator\Instantiator;
+use Lkt\Factory\Instantiator\ValueObjects\ComponentDatabaseIntegration;
+use Lkt\Factory\Instantiator\ValueObjects\MonthlyAccuratePages;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\MissedMandatoryValueException;
@@ -64,6 +67,7 @@ use Lkt\Factory\Schemas\Fields\ValueListField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\Locale\Locale;
 use Lkt\QueryBuilding\Query;
+use Lkt\QueryBuilding\SelectBuilder;
 use Lkt\Translations\Translations;
 use function Lkt\Tools\Arrays\compareArrays;
 use function Lkt\Tools\Pagination\getTotalPages;
@@ -190,12 +194,17 @@ abstract class AbstractInstance
             InstanceCache::store($code, $r);
             return InstanceCache::load($code);
         }
-        /**
-         * @var Schema $schema
-         * @var DatabaseConnector $connection
-         * @var Query $queryBuilder
-         */
-        list($builder, $connection, $schema) = Instantiator::getQueryCaller($component);
+
+        $dbIntegration = ComponentDatabaseIntegration::from($component);
+        $builder = $dbIntegration->query;
+        $schema = $dbIntegration->schema;
+
+//        /**
+//         * @var Schema $schema
+//         * @var DatabaseConnector $connection
+//         * @var Query $queryBuilder
+//         */
+//        list($builder, $connection, $schema) = Instantiator::getQueryCaller($component);
         $identifiers = $schema->getIdentifiers();
 
         foreach ($identifiers as $identifier) $builder->andIntegerEqual($identifier->getColumn(), $id);
@@ -258,12 +267,19 @@ abstract class AbstractInstance
     {
         $isUpdate = !$this->isAnonymous();
 
-        /**
-         * @var Schema $schema
-         * @var DatabaseConnector $connection
-         * @var Query $queryBuilder
-         */
-        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::COMPONENT);
+
+
+        $dbIntegration = ComponentDatabaseIntegration::from(static::COMPONENT);
+        $queryBuilder = $dbIntegration->query;
+        $connection = $dbIntegration->databaseConnector;
+        $schema = $dbIntegration->schema;
+
+//        /**
+//         * @var Schema $schema
+//         * @var DatabaseConnector $connection
+//         * @var Query $queryBuilder
+//         */
+//        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::COMPONENT);
 
         // Create only: set default values
         if (!$isUpdate) {
@@ -606,12 +622,18 @@ abstract class AbstractInstance
     {
         if ($this->isAnonymous()) return $this;
 
-        /**
-         * @var Schema $schema
-         * @var DatabaseConnector $connection
-         * @var Query $caller
-         */
-        list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::COMPONENT);
+        $dbIntegration = ComponentDatabaseIntegration::from(static::COMPONENT);
+        $caller = $dbIntegration->query;
+        $connection = $dbIntegration->databaseConnector;
+        $connector = $dbIntegration->databaseConnectorName;
+        $schema = $dbIntegration->schema;
+
+//        /**
+//         * @var Schema $schema
+//         * @var DatabaseConnector $connection
+//         * @var Query $caller
+//         */
+//        list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::COMPONENT);
 
 
         if ($schema->isPivot()) {
@@ -657,11 +679,9 @@ abstract class AbstractInstance
      */
     public static function getQueryCaller()
     {
-        /**
-         * @var Query $caller
-         */
-        list($caller) = Instantiator::getQueryCaller(static::COMPONENT);
-        return $caller;
+        return QueryBuilderHelper::getComponentQuery(static::COMPONENT);
+//        $dbIntegration = ComponentDatabaseIntegration::from(static::COMPONENT);
+//        return $dbIntegration->query;
     }
 
     /**
@@ -670,11 +690,9 @@ abstract class AbstractInstance
      */
     public static function getQueryBuilder()
     {
-        /**
-         * @var Query $caller
-         */
-        list($caller) = Instantiator::getQueryCaller(static::COMPONENT);
-        return $caller;
+        return QueryBuilderHelper::getComponentQuery(static::COMPONENT);
+//        $dbIntegration = ComponentDatabaseIntegration::from(static::COMPONENT);
+//        return $dbIntegration->query;
     }
 
     /**
@@ -746,14 +764,66 @@ abstract class AbstractInstance
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    public static function getPage(int $page, Query $queryCaller = null): array
+    public static function getPage(int $page, Query $queryCaller = null, int $itemsPerPage = 0): array
     {
         if (!$queryCaller) $queryCaller = static::getQueryCaller();
         $schema = Schema::get(static::COMPONENT);
-        $limit = $queryCaller->getLimit();
+        $limit = $itemsPerPage;
+        if ($limit <= 0) $limit = $queryCaller->getLimit();
         if ($limit <= 0) $limit = $schema->getItemsPerPage();
         if ($limit >= 0) $queryCaller->pagination($page, $limit);
         return Instantiator::makeResults(static::COMPONENT, $queryCaller->selectDistinct());
+    }
+
+    /**
+     * @param int $page
+     * @param Query|null $queryCaller
+     * @param string|null $countableField
+     * @return array
+     * @throws InvalidComponentException
+     * @throws InvalidCountableFieldException
+     * @throws InvalidSchemaAppClassException
+     * @throws SchemaNotDefinedException
+     */
+    public static function getMonthlyAccuratePage(int $page, Query $queryCaller = null, string $countableField = null): array
+    {
+        if (!$queryCaller) $queryCaller = static::getQueryBuilder();
+        $originalSelect = $queryCaller->getColumns();
+        $pagesValueObject = static::getMonthlyAccuratePages($queryCaller, $countableField);
+        $queryCaller->setColumns($originalSelect);
+        $month = $pagesValueObject->getPageYearMonth($page);
+
+        if (is_null($month)) {
+            return [];
+        }
+
+        $queryCaller->andExtractYearMonthEqual($countableField, $month);
+        return Instantiator::makeResults(static::COMPONENT, $queryCaller->selectDistinct());
+    }
+
+    /**
+     * @param Query|null $query
+     * @param string|null $countableField
+     * @param int $itemsPerPage
+     * @return MonthlyAccuratePages
+     * @throws InvalidCountableFieldException
+     * @throws SchemaNotDefinedException
+     */
+    public static function getMonthlyAccuratePages(Query $query = null, string $countableField = null): MonthlyAccuratePages
+    {
+        if (!$countableField) throw InvalidCountableFieldException::getInstance(__METHOD__, static::COMPONENT);
+
+        if (!$query) $query = static::getQueryBuilder();
+
+        $query->setColumns(SelectBuilder::yearMonthDatum($countableField, 'countable_datum'));
+
+        $results = $query->selectDistinct();
+
+        $data = array_unique(array_map(function ($item) {
+            return (int)$item['countable_datum'];
+        }, $results));
+
+        return new MonthlyAccuratePages($data);
     }
 
     public function getComponent(): string
@@ -1102,8 +1172,10 @@ abstract class AbstractInstance
         /** @var PivotPositionField $positionField */
         $positionField = $pivotSchema->getOnePositionField();
 
-        /** @var Query $queryBuilder */
-        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
+        $pivotQueryBuilder = QueryBuilderHelper::getComponentQuery($pivotComponent);
+
+//        /** @var Query $queryBuilder */
+//        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
 
         $pivotQueryBuilder->setColumns(["MAX({$positionField->getColumn()}) AS {$positionField->getName()}"]);
 
@@ -1138,11 +1210,13 @@ abstract class AbstractInstance
             $referencedField = $pivotSchema->getPivotLeftIdField();
         }
 
-        /** @var PivotPositionField $positionField */
-        $positionField = $pivotSchema->getOnePositionField();
+//        /** @var PivotPositionField $positionField */
+//        $positionField = $pivotSchema->getOnePositionField();
 
-        /** @var Query $queryBuilder */
-        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
+        $pivotQueryBuilder = QueryBuilderHelper::getComponentQuery($pivotComponent);
+
+//        /** @var Query $queryBuilder */
+//        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
 
         $pointingGetter = $pointingField->getGetterForPrimitiveValue();
         $pivotQueryBuilder->andIntegerEqual($pointingField->getColumn(), $this->{$pointingGetter}());
