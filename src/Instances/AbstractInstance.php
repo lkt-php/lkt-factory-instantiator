@@ -14,6 +14,7 @@ use Lkt\Factory\Instantiator\Helpers\FileUploadHelper;
 use Lkt\Factory\Instantiator\Helpers\QueryBuilderHelper;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnBooleanTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnColorTrait;
+use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnCompositionTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnConcatTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnDateTimeTrait;
 use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnEmailTrait;
@@ -94,7 +95,8 @@ abstract class AbstractInstance
         ColumnEncryptTrait,
         ColumnRelatedKeysMergeTrait,
         ColumnValueListTrait,
-        ColumnConcatTrait;
+        ColumnConcatTrait,
+        ColumnCompositionTrait;
 
     protected $TYPE;
     protected array $DATA = [];
@@ -607,6 +609,10 @@ abstract class AbstractInstance
                     }
                 }
             }
+        }
+
+        if (count($this->COMPOSED_DATA_UPDATED) > 0) {
+            $this->_saveCompositionValues();
         }
 
         if ($reload) {
