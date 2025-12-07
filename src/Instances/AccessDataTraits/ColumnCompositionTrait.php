@@ -10,15 +10,12 @@ use Lkt\Factory\Schemas\Schema;
 trait ColumnCompositionTrait
 {
     protected array $COMPOSED_DATA_UPDATED = [];
+    protected array $COMPOSED_DATA = [];
 
-    /**
-     * @param string $composedComponent
-     * @param string $fieldName
-     * @return mixed
-     * @throws SchemaNotDefinedException
-     */
-    protected function _getCompositionVal(string $composedComponent, string $fieldName): mixed
+    protected function _getCompositionInstance(string $composedComponent): mixed
     {
+        if (isset($this->COMPOSED_DATA[$composedComponent])) return $this->COMPOSED_DATA[$composedComponent];
+
         $compositionSchema = CompositionSchema::get(static::COMPONENT);
         $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
         $compositionField = $compositionContent->getRelatedField();
@@ -29,6 +26,23 @@ trait ColumnCompositionTrait
         }
 
         $composedInstance = $this->{$getter}();
+        $this->COMPOSED_DATA[$composedComponent] = $composedInstance;
+        return $this->COMPOSED_DATA[$composedComponent];
+    }
+
+    /**
+     * @param string $composedComponent
+     * @param string $fieldName
+     * @return mixed
+     * @throws SchemaNotDefinedException
+     */
+    protected function _getCompositionVal(string $composedComponent, string $fieldName): mixed
+    {
+        $composedInstance = $this->_getCompositionInstance($composedComponent);
+
+        $compositionSchema = CompositionSchema::get(static::COMPONENT);
+        $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
+        $compositionField = $compositionContent->getRelatedField();
 
         if (is_object($composedInstance)) {
             $composedFieldName = $compositionContent->fields[$fieldName];
@@ -51,16 +65,11 @@ trait ColumnCompositionTrait
      */
     protected function _setCompositionVal(string $composedComponent, string $fieldName, mixed $value): static
     {
+        $composedInstance = $this->_getCompositionInstance($composedComponent);
+
         $compositionSchema = CompositionSchema::get(static::COMPONENT);
         $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
         $compositionField = $compositionContent->getRelatedField();
-
-        $getter = $compositionField->getGetterForPrimitiveValue();
-        if (!is_callable([$this, $getter])) {
-            return $this;
-        }
-
-        $composedInstance = $this->{$getter}();
 
         if (is_object($composedInstance)) {
             $composedFieldName = $compositionContent->fields[$fieldName];
@@ -84,16 +93,11 @@ trait ColumnCompositionTrait
      */
     protected function _hasCompositionVal(string $composedComponent, string $fieldName): bool
     {
+        $composedInstance = $this->_getCompositionInstance($composedComponent);
+
         $compositionSchema = CompositionSchema::get(static::COMPONENT);
         $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
         $compositionField = $compositionContent->getRelatedField();
-
-        $getter = $compositionField->getGetterForPrimitiveValue();
-        if (!is_callable([$this, $getter])) {
-            return false;
-        }
-
-        $composedInstance = $this->{$getter}();
 
         if (is_object($composedInstance)) {
             $composedFieldName = $compositionContent->fields[$fieldName];
