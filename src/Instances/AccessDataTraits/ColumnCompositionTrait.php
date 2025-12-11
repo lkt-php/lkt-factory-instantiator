@@ -22,10 +22,15 @@ trait ColumnCompositionTrait
 
         $getter = $compositionField->getGetterForPrimitiveValue();
         if (!is_callable([$this, $getter])) {
+            $this->COMPOSED_DATA[$composedComponent] = null;
             return null;
         }
 
         $composedInstance = $this->{$getter}();
+        if (is_array($composedInstance)) {
+            if (count($composedInstance) > 0) $composedInstance = $composedInstance[0];
+            else  $composedInstance = null;
+        }
         $this->COMPOSED_DATA[$composedComponent] = $composedInstance;
         return $this->COMPOSED_DATA[$composedComponent];
     }
