@@ -182,7 +182,9 @@ abstract class AbstractInstance
             return $r;
         }
 
-        $code = Instantiator::getInstanceCode($component, $id);
+        $codeId = is_array($id) ? implode('-', $id) : $id;
+
+        $code = Instantiator::getInstanceCode($component, $codeId);
 
         if (InstanceCache::inCache($code)) {
             $cached = InstanceCache::load($code);
@@ -201,15 +203,15 @@ abstract class AbstractInstance
         $builder = $dbIntegration->query;
         $schema = $dbIntegration->schema;
 
-//        /**
-//         * @var Schema $schema
-//         * @var DatabaseConnector $connection
-//         * @var Query $queryBuilder
-//         */
-//        list($builder, $connection, $schema) = Instantiator::getQueryCaller($component);
         $identifiers = $schema->getIdentifiers();
 
-        foreach ($identifiers as $identifier) $builder->andIntegerEqual($identifier->getColumn(), $id);
+        if (is_array($id) && $schema->hasComplexPrimaryKey()){
+            foreach ($identifiers as $identifier) $builder->andIntegerEqual($identifier->getColumn(), $id[$identifier->getName()]);
+
+        } else {
+            foreach ($identifiers as $identifier) $builder->andIntegerEqual($identifier->getColumn(), $id);
+        }
+
 
         $data = $builder->selectDistinct();
         if (count($data) > 0) {
@@ -359,8 +361,16 @@ abstract class AbstractInstance
             $queryBuilder->updateData($parsed);
 
             if ($isUpdate) {
+                if ($schema->hasComplexPrimaryKey()) {
+                    $identifiers = $schema->getIdentifiers();
+                    foreach ($identifiers as $identifier) {
+                        $originalValueKey = $identifier->getGetterForPrimitiveValue();
+                        $originalValueKey = lcfirst(substr($originalValueKey, 3));
+                        $queryBuilder->andIntegerEqual($identifier->getColumn(), $this->DATA[$originalValueKey]);
+                    }
+                    $query = $connection->getUpdateQuery($queryBuilder);
 
-                if ($schema->isPivot()) {
+                } elseif ($schema->isPivot()) {
                     $pivotColumns = $schema->getIdColumn();
                     foreach ($pivotColumns as $pivotColumn) {
                         $idColumn = $schema->getField($pivotColumn);

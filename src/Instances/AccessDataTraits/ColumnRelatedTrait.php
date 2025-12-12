@@ -5,10 +5,13 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 use Lkt\Connectors\DatabaseConnector;
 use Lkt\Factory\Instantiator\Helpers\QueryBuilderHelper;
 use Lkt\Factory\Instantiator\Helpers\UpdatedRelatedDataProcessor;
+use Lkt\Factory\Instantiator\Instances\AbstractInstance;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\AbstractField;
+use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Fields\StringField;
@@ -28,7 +31,7 @@ trait ColumnRelatedTrait
      * @throws InvalidComponentException
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedVal(string $type = '', $column = '', $forceRefresh = false): array
+    protected function _getRelatedVal(string $type = '', $column = '', $forceRefresh = false, array $additionalData = []): array
     {
         if (!$forceRefresh && isset($this->UPDATED_RELATED_DATA[$column])) {
             return $this->UPDATED_RELATED_DATA[$column];
@@ -47,7 +50,7 @@ trait ColumnRelatedTrait
             return [];
         }
 
-        $caller = $this->_getRelatedQueryCaller($type, $column, $forceRefresh);
+        $caller = $this->_getRelatedQueryCaller($type, $column, $forceRefresh, $additionalData);
 
         $data = $caller->select();
         $relatedSchema = Schema::get($field->getComponent());
@@ -67,7 +70,7 @@ trait ColumnRelatedTrait
      * @throws InvalidSchemaAppClassException
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedValSingle(string $type = '', $column = '', $forceRefresh = false)
+    protected function _getRelatedValSingle(string $type = '', $column = '', $forceRefresh = false, array $additionalData = [])
     {
         if (!$forceRefresh && isset($this->UPDATED_RELATED_DATA[$column])) {
             return $this->UPDATED_RELATED_DATA[$column];
@@ -86,7 +89,7 @@ trait ColumnRelatedTrait
             return null;
         }
 
-        $caller = $this->_getRelatedQueryCaller($type, $column, $forceRefresh);
+        $caller = $this->_getRelatedQueryCaller($type, $column, $forceRefresh, $additionalData);
 
         $data = $caller->select();
         $relatedSchema = Schema::get($field->getComponent());
@@ -100,7 +103,7 @@ trait ColumnRelatedTrait
     /**
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedQueryBuilder($type = '', $column = '', $forceRefresh = false)
+    protected function _getRelatedQueryBuilder($type = '', $column = '', $forceRefresh = false, array $additionalData = [])
     {
         if (!$type) return null;
 
@@ -114,21 +117,21 @@ trait ColumnRelatedTrait
 //         */
 //        list($builder) = Instantiator::getQueryCaller($field->getComponent());
 
-        return $this->_prepareQuery($builder, $schema, $field, $forceRefresh);
+        return $this->_prepareQuery($builder, $schema, $field, $forceRefresh, $additionalData);
     }
 
     /**
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedQueryCaller($type = '', $column = '', $forceRefresh = false)
+    protected function _getRelatedQueryCaller($type = '', $column = '', $forceRefresh = false, array $additionalData = [])
     {
-        return $this->_getRelatedQueryBuilder($type, $column, $forceRefresh);
+        return $this->_getRelatedQueryBuilder($type, $column, $forceRefresh, $additionalData);
     }
 
     /**
      * @throws SchemaNotDefinedException
      */
-    protected function _getRelatedCustomQueryBuilder($type = '', $column = '', $forceRefresh = false)
+    protected function _getRelatedCustomQueryBuilder($type = '', $column = '', $forceRefresh = false, array $additionalData = [])
     {
         $schema = Schema::get(static::COMPONENT);
         $field = $schema->getRelatedField($column);
@@ -142,35 +145,57 @@ trait ColumnRelatedTrait
         return $this->_prepareQuery($builder, $schema, $field, $forceRefresh);
     }
 
-    protected function _prepareQuery(Query $query, Schema $schema, RelatedField $field, $forceRefresh = false)
+    protected function _prepareQuery(Query $query, Schema $schema, RelatedField $field, $forceRefresh = false, array $additionalData = [])
     {
         $idColumn = $schema->getIdString();
         $relatedSchema = Schema::get($field->getComponent());
 
         $where = (array)$field?->getWhere();
 
-        if ($field->hasMultipleReferences()) {
-            foreach ($field->getMultipleReferences() as $reference) {
-                $relatedField = $relatedSchema->getField($reference);
-                if ($relatedField instanceof IntegerField) {
-                    $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+        if ($relatedSchema->hasComplexPrimaryKey()) {
+            $identifiers = $relatedSchema->getIdentifiers();
+            $additionalDataKeys = array_keys($additionalData);
+            foreach ($identifiers as $identifier) {
+                $identifierName = $identifier->getName();
+                if (in_array($identifierName, $additionalDataKeys)) {
 
-                } elseif ($relatedField instanceof StringField) {
-                    $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                    if ($identifier instanceof ForeignKeyField && $additionalData[$identifierName] instanceof AbstractInstance) {
+                        $query->andIntegerEqual($identifier->getColumn(), (int)$additionalData[$identifierName]?->getIdColumnValue());
+
+                    }elseif ($identifier instanceof IntegerField) {
+                        $query->andIntegerEqual($identifier->getColumn(), $additionalData[$identifierName]);
+
+                    } elseif ($identifier instanceof StringField) {
+                        $query->andStringEqual($identifier->getColumn(), $additionalData[$identifierName]);
+                    }
                 }
             }
 
         } else {
-            if ($this->DATA[$idColumn]) {
-                $relatedField = $relatedSchema->getField($field->getColumn());
-                if ($relatedField instanceof IntegerField) {
-                    $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+            if ($field->hasMultipleReferences()) {
+                foreach ($field->getMultipleReferences() as $reference) {
+                    $relatedField = $relatedSchema->getField($reference);
+                    if ($relatedField instanceof IntegerField) {
+                        $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
 
-                } elseif ($relatedField instanceof StringField) {
-                    $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                    } elseif ($relatedField instanceof StringField) {
+                        $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                    }
+                }
+
+            } else {
+                if ($this->DATA[$idColumn]) {
+                    $relatedField = $relatedSchema->getField($field->getColumn());
+                    if ($relatedField instanceof IntegerField) {
+                        $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+
+                    } elseif ($relatedField instanceof StringField) {
+                        $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                    }
                 }
             }
         }
+
         $order = $field->getOrder();
         if (!is_array($order)) $order = [];
 
