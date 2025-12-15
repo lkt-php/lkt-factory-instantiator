@@ -5,6 +5,7 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 use Lkt\Factory\Schemas\CompositionSchema;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
+use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\StringField;
@@ -16,6 +17,38 @@ trait ColumnCompositionTrait
     protected array $COMPOSED_DATA = [];
     protected array $COMPOSED_DATA_ADDITIONAL_DATA = [];
 
+    private function _getCompositionAdditionalData(array $additionalData = [], mixed $reflectedInstance, string $reflectedMethod)
+    {
+        $compositionSchema = CompositionSchema::get(static::COMPONENT);
+
+        $compositionValuesFields = $compositionSchema->getCompositionValueFields();
+
+        /**
+         * @var  $key
+         * @var AbstractField $compositionValueField
+         */
+        foreach ($compositionValuesFields as $key => $compositionValueField) {
+            if (!$additionalData[$key]) {
+                $getterAux = $compositionValueField->getGetterForPrimitiveValue();
+                if (is_callable([$this, $getterAux])) {
+                    $additionalData[$key] = $this->{$getterAux}();
+                }
+            }
+        }
+
+//        dump([$additionalData, $reflectedInstance, $reflectedMethod]);
+        $reflectionMethod = new \ReflectionMethod($reflectedInstance, $reflectedMethod);
+        $params = $reflectionMethod->getParameters();
+
+        $paramsKeys = array_map(function ($param){ return $param->getName();}, $params);
+
+        foreach (array_keys($additionalData) as $key) {
+            if (!in_array($key, $paramsKeys)) unset($additionalData[$key]);
+        }
+
+        return $additionalData;
+    }
+
     protected function _getCompositionInstance(string $composedComponent, array $additionalData = []): mixed
     {
         if (isset($this->COMPOSED_DATA[$composedComponent])) return $this->COMPOSED_DATA[$composedComponent];
@@ -25,13 +58,43 @@ trait ColumnCompositionTrait
         $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
         $compositionField = $compositionContent->getRelatedField();
 
-        $getter = $compositionField->getGetterForPrimitiveValue();
+        $getter = $compositionField->getGetterForData();
         if (!is_callable([$this, $getter])) {
             $this->COMPOSED_DATA[$composedComponent] = null;
             return null;
         }
 
+//        dump($additionalData);
+        $additionalData = $this->_getCompositionAdditionalData($additionalData, $this, $getter);
+
+//        dump($additionalData);
+
+//        $compositionValuesFields = $compositionSchema->getCompositionValueFields();
+//
+//        /**
+//         * @var  $key
+//         * @var AbstractField $compositionValueField
+//         */
+//        foreach ($compositionValuesFields as $key => $compositionValueField) {
+//            if (!$additionalData[$key]) {
+//                $getterAux = $compositionValueField->getGetterForPrimitiveValue();
+//                if (is_callable([$this, $getterAux])) {
+//                    $additionalData[$key] = $this->{$getterAux}();
+//                }
+//            }
+//        }
+
         if (count($additionalData) > 0) {
+
+//            $reflectionMethod = new \ReflectionMethod($this, $getter);
+//            $params = $reflectionMethod->getParameters();
+//
+//            $paramsKeys = array_map(function ($param){ return $param->getName();}, $params);
+//
+//            foreach (array_keys($additionalData) as $key) {
+//                if (!in_array($key, $paramsKeys)) unset($additionalData[$key]);
+//            }
+
             $composedInstance = call_user_func_array([$this, $getter], $additionalData);
         } else {
             $composedInstance = $this->{$getter}();
@@ -62,8 +125,32 @@ trait ColumnCompositionTrait
         $composedField = $composedSchema->getField($composedFieldName);
 
         if (is_object($composedInstance)) {
-            $composedFieldGetter = $composedField->getGetterForPrimitiveValue();
-            return $composedInstance->{$composedFieldGetter}();
+            if ($composedField) {
+                $composedFieldGetter = $composedField?->getGetterForPrimitiveValue();
+                if (!$composedFieldGetter) return null;
+
+                $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedInstance, $composedFieldGetter);
+
+                if (count($additionalData) > 0) {
+                    return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
+                } else {
+                    return $composedInstance?->{$composedFieldGetter}();
+                }
+            }
+
+            $composedSchema = CompositionSchema::get($compositionField->getComponent());
+            $composedField = $composedSchema->getField($composedFieldName);
+            $composedFieldGetter = $composedField?->getGetterForPrimitiveValue();
+            if (!$composedFieldGetter) return null;
+
+            $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedInstance, $composedFieldGetter);
+
+            if (count($additionalData) > 0) {
+                return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
+            } else {
+                return $composedInstance?->{$composedFieldGetter}();
+            }
+
         }
 
         if ($composedField instanceof BooleanField) return false;
