@@ -156,37 +156,34 @@ trait ColumnRelatedTrait
         if ($relatedSchema->hasComplexPrimaryKey()) {
             $identifiers = $relatedSchema->getIdentifiers();
             $relatedField = $relatedSchema->getField($field->getColumn());
-            $additionalDataKeys = array_keys($additionalData);
             foreach ($identifiers as $identifier) {
                 $identifierName = $identifier->getName();
-//                if (in_array($identifierName, $additionalDataKeys)) {
 
-                    if ($identifier instanceof ForeignKeyField && $additionalData[$identifierName] instanceof AbstractInstance) {
+                if ($identifier instanceof ForeignKeyField && $additionalData[$identifierName] instanceof AbstractInstance) {
 
-                        if ($relatedField->getColumn() === $identifier->getColumn()) {
-                            $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
-                        } else {
-                            $query->andIntegerEqual($identifier->getColumn(), (int)$additionalData[$identifierName]?->getIdColumnValue());
-                        }
-
-
-                    }elseif ($identifier instanceof IntegerField) {
-
-                        if ($relatedField->getColumn() === $identifier->getColumn()) {
-                            $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
-                        } else {
-                            $query->andIntegerEqual($identifier->getColumn(), $additionalData[$identifierName]);
-                        }
-
-                    } elseif ($identifier instanceof StringField) {
-
-                        if ($relatedField->getColumn() === $identifier->getColumn()) {
-                            $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
-                        } else {
-                            $query->andStringEqual($identifier->getColumn(), $additionalData[$identifierName]);
-                        }
+                    if ($relatedField->getColumn() === $identifier->getColumn()) {
+                        $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                    } else {
+                        $query->andIntegerEqual($identifier->getColumn(), (int)$additionalData[$identifierName]?->getIdColumnValue());
                     }
-//                }
+
+
+                }elseif ($identifier instanceof IntegerField) {
+
+                    if ($relatedField->getColumn() === $identifier->getColumn()) {
+                        $query->andIntegerEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                    } else {
+                        $query->andIntegerEqual($identifier->getColumn(), $additionalData[$identifierName]);
+                    }
+
+                } elseif ($identifier instanceof StringField) {
+
+                    if ($relatedField->getColumn() === $identifier->getColumn()) {
+                        $query->andStringEqual($relatedField->getColumn(), $this->DATA[$idColumn]);
+                    } else {
+                        $query->andStringEqual($identifier->getColumn(), $additionalData[$identifierName]);
+                    }
+                }
             }
 
         } else {

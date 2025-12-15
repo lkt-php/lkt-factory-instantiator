@@ -54,7 +54,6 @@ trait ColumnCompositionTrait
             if (!in_array($key, $paramsKeys)) unset($additionalData[$key]);
         }
 
-//        dump(['post', $additionalData, $reflectedInstance, $reflectedMethod]);
         return $additionalData;
     }
 
@@ -79,11 +78,7 @@ trait ColumnCompositionTrait
             return null;
         }
 
-//        dump(['2: pre-clear _getCompositionInstance', static::COMPONENT, $additionalData, $composedComponent, $getter, $this]);
         $additionalData = $this->_getCompositionAdditionalData($additionalData, $this, $getter);
-//        dump(['3: post-clear _getCompositionInstance', static::COMPONENT, $additionalData, $composedComponent, $getter, $this]);
-
-//        dump($additionalData);
 
         if (count($additionalData) > 0) {
             $composedInstance = call_user_func_array([$this, $getter], $additionalData);
@@ -94,8 +89,6 @@ trait ColumnCompositionTrait
             if (count($composedInstance) > 0) $composedInstance = $composedInstance[0];
             else  $composedInstance = null;
         }
-
-//        dump($composedInstance);
 
         if ($composedInstance === null) {
             $appClass = $composedSchema->getInstanceSettings()->getAppClass();
@@ -122,7 +115,6 @@ trait ColumnCompositionTrait
                 $emptyInstance->{$setter}($this?->getIdColumnValue());
             }
             $composedInstance = $emptyInstance;
-//            dump($emptyInstance);
         }
 
         $this->COMPOSED_DATA[$composedComponent] = $composedInstance;
@@ -137,7 +129,6 @@ trait ColumnCompositionTrait
      */
     protected function _getCompositionVal(string $composedComponent, string $fieldName, array $additionalData = []): mixed
     {
-//        dump(['1: >>> _getCompositionVal', static::COMPONENT, $additionalData, $composedComponent, $fieldName]);
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
         $compositionSchema = CompositionSchema::get(static::COMPONENT);
@@ -153,15 +144,11 @@ trait ColumnCompositionTrait
                 $composedFieldGetter = $composedField?->getGetterForPrimitiveValue();
                 if (!$composedFieldGetter) return null;
 
-//                dump(['4: pre-clear', static::COMPONENT, $additionalData, $composedComponent, $fieldName, $this, $composedInstance]);
                 $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedInstance, $composedFieldGetter);
-//                dump(['5: post-clear', static::COMPONENT, $additionalData, $composedComponent, $fieldName]);
 
                 if (count($additionalData) > 0) {
-//                    dump(['6.2: Additional data value', call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData), $composedInstance, $composedFieldGetter, $additionalData]);
                     return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
                 } else {
-//                    dump(['6.1: Raw value', $composedInstance?->{$composedFieldGetter}(), $composedInstance]);
                     return $composedInstance?->{$composedFieldGetter}();
                 }
             }
@@ -179,20 +166,6 @@ trait ColumnCompositionTrait
                 return $composedInstance?->{$composedFieldGetter}();
             }
         }
-
-//        dump(['Not found! Fallback value', $additionalData, $this, $composedField]);
-
-
-
-//        if ($emptyInstance) {
-//            if (count($additionalData) > 0) {
-//                return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
-//            } else {
-//                return $composedInstance?->{$composedFieldGetter}();
-//            }
-//        }
-
-//        dump(['Empty instance fallback: ', $emptyInstance, $this, $backPointerField]);
 
         if ($composedField instanceof BooleanField) return false;
         if ($composedField instanceof StringField) return '';
