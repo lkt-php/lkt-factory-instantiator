@@ -2,12 +2,16 @@
 
 namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
+use Lkt\Factory\Instantiator\Enums\CrudOperation;
+use Lkt\Factory\Instantiator\Instances\AbstractInstance;
 use Lkt\Factory\Schemas\CompositionSchema;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\BooleanField;
+use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
+use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Schema;
 
@@ -29,23 +33,28 @@ trait ColumnCompositionTrait
          */
         foreach ($compositionValuesFields as $key => $compositionValueField) {
             if (!$additionalData[$key]) {
-                $getterAux = $compositionValueField->getGetterForPrimitiveValue();
+                if ($compositionValueField instanceof ForeignKeyField) {
+                    $getterAux = $compositionValueField->getGetterForData();
+                } else {
+                    $getterAux = $compositionValueField->getGetterForPrimitiveValue();
+                }
+
                 if (is_callable([$this, $getterAux])) {
                     $additionalData[$key] = $this->{$getterAux}();
                 }
             }
         }
 
-//        dump([$additionalData, $reflectedInstance, $reflectedMethod]);
         $reflectionMethod = new \ReflectionMethod($reflectedInstance, $reflectedMethod);
         $params = $reflectionMethod->getParameters();
 
-        $paramsKeys = array_map(function ($param){ return $param->getName();}, $params);
+        $paramsKeys = array_map(function (\ReflectionParameter $param){ return $param->getName();}, $params);
 
         foreach (array_keys($additionalData) as $key) {
             if (!in_array($key, $paramsKeys)) unset($additionalData[$key]);
         }
 
+//        dump(['post', $additionalData, $reflectedInstance, $reflectedMethod]);
         return $additionalData;
     }
 
@@ -57,44 +66,26 @@ trait ColumnCompositionTrait
         $compositionSchema = CompositionSchema::get(static::COMPONENT);
         $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
         $compositionField = $compositionContent->getRelatedField();
+        $composedSchema = Schema::get($compositionField->getComponent());
 
-        $getter = $compositionField->getGetterForData();
+        if ($compositionField instanceof ForeignKeyField) {
+            $getter = $compositionField->getGetterForData();
+        } else {
+            $getter = $compositionField->getGetterForPrimitiveValue();
+        }
+
         if (!is_callable([$this, $getter])) {
             $this->COMPOSED_DATA[$composedComponent] = null;
             return null;
         }
 
-//        dump($additionalData);
+//        dump(['2: pre-clear _getCompositionInstance', static::COMPONENT, $additionalData, $composedComponent, $getter, $this]);
         $additionalData = $this->_getCompositionAdditionalData($additionalData, $this, $getter);
+//        dump(['3: post-clear _getCompositionInstance', static::COMPONENT, $additionalData, $composedComponent, $getter, $this]);
 
 //        dump($additionalData);
-
-//        $compositionValuesFields = $compositionSchema->getCompositionValueFields();
-//
-//        /**
-//         * @var  $key
-//         * @var AbstractField $compositionValueField
-//         */
-//        foreach ($compositionValuesFields as $key => $compositionValueField) {
-//            if (!$additionalData[$key]) {
-//                $getterAux = $compositionValueField->getGetterForPrimitiveValue();
-//                if (is_callable([$this, $getterAux])) {
-//                    $additionalData[$key] = $this->{$getterAux}();
-//                }
-//            }
-//        }
 
         if (count($additionalData) > 0) {
-
-//            $reflectionMethod = new \ReflectionMethod($this, $getter);
-//            $params = $reflectionMethod->getParameters();
-//
-//            $paramsKeys = array_map(function ($param){ return $param->getName();}, $params);
-//
-//            foreach (array_keys($additionalData) as $key) {
-//                if (!in_array($key, $paramsKeys)) unset($additionalData[$key]);
-//            }
-
             $composedInstance = call_user_func_array([$this, $getter], $additionalData);
         } else {
             $composedInstance = $this->{$getter}();
@@ -103,6 +94,37 @@ trait ColumnCompositionTrait
             if (count($composedInstance) > 0) $composedInstance = $composedInstance[0];
             else  $composedInstance = null;
         }
+
+//        dump($composedInstance);
+
+        if ($composedInstance === null) {
+            $appClass = $composedSchema->getInstanceSettings()->getAppClass();
+            $emptyInstance = $appClass::getInstance();
+            $emptyInstance::feedInstance($emptyInstance, $emptyInstance->prepareCrudData($additionalData, CrudOperation::Create));
+
+            foreach ($composedSchema->getIdentifiers() as $identifier) {
+                if (isset($additionalData[$identifier->getName()])) {
+                    if ($additionalData[$identifier->getName()] instanceof AbstractInstance) {
+                        $setter = $identifier->getSetterForPrimitiveValue();
+                        $emptyInstance->{$setter}($additionalData[$identifier->getName()]?->getIdColumnValue());
+
+                    } else {
+                        $setter = $identifier->getSetter();
+                        $emptyInstance->{$setter}($additionalData[$identifier->getName()]);
+                    }
+                }
+            }
+
+            $backPointerField = $composedSchema->getOneFieldPointingToComponent(static::COMPONENT);
+
+            if ($backPointerField) {
+                $setter = $identifier->getSetterForPrimitiveValue();
+                $emptyInstance->{$setter}($this?->getIdColumnValue());
+            }
+            $composedInstance = $emptyInstance;
+//            dump($emptyInstance);
+        }
+
         $this->COMPOSED_DATA[$composedComponent] = $composedInstance;
         return $this->COMPOSED_DATA[$composedComponent];
     }
@@ -115,6 +137,7 @@ trait ColumnCompositionTrait
      */
     protected function _getCompositionVal(string $composedComponent, string $fieldName, array $additionalData = []): mixed
     {
+//        dump(['1: >>> _getCompositionVal', static::COMPONENT, $additionalData, $composedComponent, $fieldName]);
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
         $compositionSchema = CompositionSchema::get(static::COMPONENT);
@@ -123,17 +146,22 @@ trait ColumnCompositionTrait
         $composedFieldName = $compositionContent->fields[$fieldName];
         $composedSchema = Schema::get($compositionField->getComponent());
         $composedField = $composedSchema->getField($composedFieldName);
+        $composedFieldGetter = null;
 
         if (is_object($composedInstance)) {
             if ($composedField) {
                 $composedFieldGetter = $composedField?->getGetterForPrimitiveValue();
                 if (!$composedFieldGetter) return null;
 
+//                dump(['4: pre-clear', static::COMPONENT, $additionalData, $composedComponent, $fieldName, $this, $composedInstance]);
                 $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedInstance, $composedFieldGetter);
+//                dump(['5: post-clear', static::COMPONENT, $additionalData, $composedComponent, $fieldName]);
 
                 if (count($additionalData) > 0) {
+//                    dump(['6.2: Additional data value', call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData), $composedInstance, $composedFieldGetter, $additionalData]);
                     return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
                 } else {
+//                    dump(['6.1: Raw value', $composedInstance?->{$composedFieldGetter}(), $composedInstance]);
                     return $composedInstance?->{$composedFieldGetter}();
                 }
             }
@@ -150,8 +178,21 @@ trait ColumnCompositionTrait
             } else {
                 return $composedInstance?->{$composedFieldGetter}();
             }
-
         }
+
+//        dump(['Not found! Fallback value', $additionalData, $this, $composedField]);
+
+
+
+//        if ($emptyInstance) {
+//            if (count($additionalData) > 0) {
+//                return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
+//            } else {
+//                return $composedInstance?->{$composedFieldGetter}();
+//            }
+//        }
+
+//        dump(['Empty instance fallback: ', $emptyInstance, $this, $backPointerField]);
 
         if ($composedField instanceof BooleanField) return false;
         if ($composedField instanceof StringField) return '';
