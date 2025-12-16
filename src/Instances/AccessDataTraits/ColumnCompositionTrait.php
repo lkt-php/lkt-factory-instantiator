@@ -11,7 +11,6 @@ use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\BooleanField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
-use Lkt\Factory\Schemas\Fields\RelatedField;
 use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Schema;
 
@@ -21,11 +20,11 @@ trait ColumnCompositionTrait
     protected array $COMPOSED_DATA = [];
     protected array $COMPOSED_DATA_ADDITIONAL_DATA = [];
 
-    private function _getCompositionAdditionalData(array $additionalData = [], mixed $reflectedInstance, string $reflectedMethod)
+    private function _getCompositionAdditionalData(array $additionalData = [], string $fieldName, mixed $reflectedInstance, string $reflectedMethod)
     {
-        $compositionSchema = CompositionSchema::get(static::COMPONENT);
+        $compositionSchema = Schema::get(static::COMPONENT);
 
-        $compositionValuesFields = $compositionSchema->getCompositionValueFields();
+        $compositionValuesFields = $compositionSchema->getCompositionValueFields($fieldName);
 
         /**
          * @var  $key
@@ -78,7 +77,7 @@ trait ColumnCompositionTrait
             return null;
         }
 
-        $additionalData = $this->_getCompositionAdditionalData($additionalData, $this, $getter);
+        $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedComponent, $this, $getter);
 
         if (count($additionalData) > 0) {
             $composedInstance = call_user_func_array([$this, $getter], $additionalData);
@@ -131,10 +130,11 @@ trait ColumnCompositionTrait
     {
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
-        $compositionSchema = CompositionSchema::get(static::COMPONENT);
-        $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
-        $compositionField = $compositionContent->getRelatedField();
-        $composedFieldName = $compositionContent->fields[$fieldName];
+        $compositionSchema = Schema::get(static::COMPONENT);
+        $compositionField = $compositionSchema->getCompositionField($composedComponent);
+        $compositionContent = $compositionField->getCompositionContent();
+        $composedFieldName = $compositionContent[$fieldName];
+
         $composedSchema = Schema::get($compositionField->getComponent());
         $composedField = $composedSchema->getField($composedFieldName);
         $composedFieldGetter = null;
@@ -144,7 +144,7 @@ trait ColumnCompositionTrait
                 $composedFieldGetter = $composedField?->getGetterForPrimitiveValue();
                 if (!$composedFieldGetter) return null;
 
-                $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedInstance, $composedFieldGetter);
+                $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedComponent, $composedInstance, $composedFieldGetter);
 
                 if (count($additionalData) > 0) {
                     return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
@@ -153,12 +153,12 @@ trait ColumnCompositionTrait
                 }
             }
 
-            $composedSchema = CompositionSchema::get($compositionField->getComponent());
-            $composedField = $composedSchema->getField($composedFieldName);
+            $composedSchema = Schema::get($compositionField->getComponent());
+            $composedField = $composedSchema->getCompositionField($composedFieldName);
             $composedFieldGetter = $composedField?->getGetterForPrimitiveValue();
             if (!$composedFieldGetter) return null;
 
-            $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedInstance, $composedFieldGetter);
+            $additionalData = $this->_getCompositionAdditionalData($additionalData, $composedComponent, $composedInstance, $composedFieldGetter);
 
             if (count($additionalData) > 0) {
                 return call_user_func_array([$composedInstance, $composedFieldGetter], $additionalData);
@@ -187,9 +187,9 @@ trait ColumnCompositionTrait
     {
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
-        $compositionSchema = CompositionSchema::get(static::COMPONENT);
-        $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
-        $compositionField = $compositionContent->getRelatedField();
+        $compositionSchema = Schema::get(static::COMPONENT);
+        $compositionField = $compositionSchema->getCompositionField($fieldName);
+        $compositionContent = $compositionSchema->getCompositionContent();
 
         if (is_object($composedInstance)) {
             $composedFieldName = $compositionContent->fields[$fieldName];

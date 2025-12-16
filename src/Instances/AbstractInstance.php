@@ -36,7 +36,6 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnValueListTrait;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Instantiator\ValueObjects\ComponentDatabaseIntegration;
 use Lkt\Factory\Instantiator\ValueObjects\MonthlyAccuratePages;
-use Lkt\Factory\Schemas\CompositionSchema;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\MissedMandatoryValueException;
@@ -874,14 +873,15 @@ abstract class AbstractInstance
         return $data;
     }
 
-    public function autoRead(): array
+    public function autoRead(string $view = ''): array
     {
-        $fields = Schema::get(static::COMPONENT)->getFields();
-        $composedSchema = CompositionSchema::get(static::COMPONENT);
-        if ($composedSchema) {
-            $fields = [...$fields, ...$composedSchema->getComposedFields()];
+        $schema = Schema::get(static::COMPONENT);
+        $fields = $view ? $schema->getViewFields($view) : $schema->getFields();
+//        $composedSchema = CompositionSchema::get(static::COMPONENT);
+        if (!$view) {
+            $fields = [...$fields, ...$schema->getComposedFields()];
         }
-        return $this->patchReadData($this->readFields($fields));
+        return $this->patchReadData($this->readFields($fields, $view));
     }
 
     public function autoCreate(array $data): static

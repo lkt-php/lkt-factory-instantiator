@@ -7,11 +7,9 @@ use Lkt\Factory\Instantiator\Helpers\QueryBuilderHelper;
 use Lkt\Factory\Instantiator\Helpers\UpdatedRelatedDataProcessor;
 use Lkt\Factory\Instantiator\Instances\AbstractInstance;
 use Lkt\Factory\Instantiator\Instantiator;
-use Lkt\Factory\Schemas\CompositionSchema;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
-use Lkt\Factory\Schemas\Fields\AbstractField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
@@ -19,7 +17,6 @@ use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Schema;
 use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\Where;
-use function Lkt\Tools\Arrays\implodeWithOR;
 use function Lkt\Tools\Pagination\getTotalPages;
 
 trait ColumnRelatedTrait
