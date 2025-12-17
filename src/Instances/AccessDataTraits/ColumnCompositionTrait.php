@@ -104,6 +104,11 @@ trait ColumnCompositionTrait
                         $setter = $identifier->getSetterForPrimitiveValue();
                         $emptyInstance->{$setter}($additionalData[$identifier->getName()]?->getIdColumnValue());
 
+                    } elseif($identifier instanceof ForeignKeyField) {
+                        $setter = $identifier->getSetterForPrimitiveValue();
+                        $content = $additionalData[$identifier->getName()] instanceof AbstractInstance ? $additionalData[$identifier->getName()]?->getIdColumnValue() : $additionalData[$identifier->getName()];
+                        $emptyInstance->{$setter}($content);
+
                     } else {
                         $setter = $identifier->getSetter();
                         $emptyInstance->{$setter}($additionalData[$identifier->getName()]);
@@ -120,6 +125,7 @@ trait ColumnCompositionTrait
                 $setter = $identifier->getSetterForPrimitiveValue();
                 $emptyInstance->{$setter}($this?->getIdColumnValue());
             }
+
             $composedInstance = $emptyInstance;
         }
 
@@ -248,21 +254,13 @@ trait ColumnCompositionTrait
         foreach ($this->COMPOSED_DATA_UPDATED as $composedComponent) {
             $schema = Schema::get(static::COMPONENT);
             $field = $schema->getCompositionField($composedComponent);
-            $compositionContent = $field->getCompositionContent();
 
             $getter = $field->getGetterForPrimitiveValue();
             if (!is_callable([$this, $getter])) {
                 return null;
             }
 
-            $additionalData = $this->_getCompositionAdditionalData($this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent], $composedComponent, $this, $getter);
-
-            if (is_array($additionalData) && count($additionalData) > 0) {
-                $composedInstance = call_user_func_array([$this, $getter], $additionalData);
-            } else {
-                $composedInstance = $this->{$getter}();
-            }
-
+            $composedInstance = $this->_getCompositionInstance($composedComponent, $this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent]);
 
             if (is_object($composedInstance) && is_callable([$composedInstance, 'save'])) {
                 $composedInstance->save();
