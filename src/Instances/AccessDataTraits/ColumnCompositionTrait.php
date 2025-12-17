@@ -62,6 +62,7 @@ trait ColumnCompositionTrait
 
     protected function _getCompositionInstance(string $composedComponent, array $additionalData = []): mixed
     {
+        dump(['_getCompositionInstance', static::COMPONENT, $composedComponent, $additionalData]);
         if (isset($this->COMPOSED_DATA[$composedComponent])) return $this->COMPOSED_DATA[$composedComponent];
 
         $this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent] = $additionalData;
@@ -190,15 +191,23 @@ trait ColumnCompositionTrait
      */
     protected function _setCompositionVal(string $composedComponent, string $fieldName, mixed $value, array $additionalData = []): static
     {
+        dump(['_setCompositionVal', static::COMPONENT, $composedComponent, $fieldName, $value, $additionalData]);
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
-        $compositionSchema = Schema::get(static::COMPONENT);
-        $compositionField = $compositionSchema->getCompositionField($fieldName);
-        $compositionContent = $compositionSchema->getCompositionContent();
+        $schema = Schema::get(static::COMPONENT);
+        $field = $schema->getCompositionField($fieldName);
+        $composedFieldName = $fieldName;
+
+        if (!$field) {
+            $nestedCompositionField = $schema->getCompositionFieldComposingThisField($fieldName);
+            $nestedComposedSchema = Schema::get($nestedCompositionField->getComponent());
+            $field = $nestedComposedSchema->getField($fieldName);
+            $composedFieldName = $field->getName();
+        }
+        dump(['_setCompositionVal 2', $composedInstance, $schema, $field, $fieldName]);
 
         if (is_object($composedInstance)) {
-            $composedFieldName = $compositionContent[$fieldName];
-            $composedSchema = Schema::get($compositionField->getComponent());
+            $composedSchema = $nestedComposedSchema ?? Schema::get($field->getComponent());
             $composedField = $composedSchema->getField($composedFieldName);
             $composedFieldSetter = $composedField->getSetterForPrimitiveValue();
             $composedInstance->{$composedFieldSetter}($value);
@@ -237,17 +246,19 @@ trait ColumnCompositionTrait
     protected function _saveCompositionValues()
     {
         foreach ($this->COMPOSED_DATA_UPDATED as $composedComponent) {
-            $compositionSchema = CompositionSchema::get(static::COMPONENT);
-            $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
-            $compositionField = $compositionContent->getRelatedField();
+            $schema = Schema::get(static::COMPONENT);
+            $field = $schema->getCompositionField($composedComponent);
+            $compositionContent = $field->getCompositionContent();
 
-            $getter = $compositionField->getGetterForPrimitiveValue();
+            $getter = $field->getGetterForPrimitiveValue();
             if (!is_callable([$this, $getter])) {
                 return null;
             }
 
-            if (is_array($this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent]) && count($this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent]) > 0) {
-                $composedInstance = call_user_func_array([$this, $getter], $this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent]);
+            $additionalData = $this->_getCompositionAdditionalData($this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent], $composedComponent, $this, $getter);
+
+            if (is_array($additionalData) && count($additionalData) > 0) {
+                $composedInstance = call_user_func_array([$this, $getter], $additionalData);
             } else {
                 $composedInstance = $this->{$getter}();
             }
