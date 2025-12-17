@@ -4,7 +4,6 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\Factory\Instantiator\Enums\CrudOperation;
 use Lkt\Factory\Instantiator\Instances\AbstractInstance;
-use Lkt\Factory\Schemas\CompositionSchema;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
@@ -62,7 +61,6 @@ trait ColumnCompositionTrait
 
     protected function _getCompositionInstance(string $composedComponent, array $additionalData = []): mixed
     {
-        dump(['_getCompositionInstance', static::COMPONENT, $composedComponent, $additionalData]);
         if (isset($this->COMPOSED_DATA[$composedComponent])) return $this->COMPOSED_DATA[$composedComponent];
 
         $this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent] = $additionalData;
@@ -197,7 +195,6 @@ trait ColumnCompositionTrait
      */
     protected function _setCompositionVal(string $composedComponent, string $fieldName, mixed $value, array $additionalData = []): static
     {
-        dump(['_setCompositionVal', static::COMPONENT, $composedComponent, $fieldName, $value, $additionalData]);
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
         $schema = Schema::get(static::COMPONENT);
@@ -210,7 +207,6 @@ trait ColumnCompositionTrait
             $field = $nestedComposedSchema->getField($fieldName);
             $composedFieldName = $field->getName();
         }
-        dump(['_setCompositionVal 2', $composedInstance, $schema, $field, $fieldName]);
 
         if (is_object($composedInstance)) {
             $composedSchema = $nestedComposedSchema ?? Schema::get($field->getComponent());
@@ -251,6 +247,11 @@ trait ColumnCompositionTrait
 
     protected function _saveCompositionValues()
     {
+        foreach ($this->COMPOSED_DATA as $composedInstance) {
+            if (is_object($composedInstance) && is_callable([$composedInstance, 'save'])) {
+                $composedInstance->save();
+            }
+        }
         foreach ($this->COMPOSED_DATA_UPDATED as $composedComponent) {
             $schema = Schema::get(static::COMPONENT);
             $field = $schema->getCompositionField($composedComponent);
@@ -261,6 +262,7 @@ trait ColumnCompositionTrait
             }
 
             $composedInstance = $this->_getCompositionInstance($composedComponent, $this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent]);
+//            dd($composedInstance);
 
             if (is_object($composedInstance) && is_callable([$composedInstance, 'save'])) {
                 $composedInstance->save();

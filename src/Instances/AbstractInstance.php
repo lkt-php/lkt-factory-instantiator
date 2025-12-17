@@ -620,10 +620,7 @@ abstract class AbstractInstance
                 }
             }
         }
-
-        if (count($this->COMPOSED_DATA_UPDATED) > 0) {
-            $this->_saveCompositionValues();
-        }
+        $this->_saveCompositionValues();
 
         if ($reload) {
             $cacheCode = Instantiator::getInstanceCode(static::COMPONENT, $id);
