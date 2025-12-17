@@ -20,11 +20,11 @@ trait ColumnCompositionTrait
     protected array $COMPOSED_DATA = [];
     protected array $COMPOSED_DATA_ADDITIONAL_DATA = [];
 
-    private function _getCompositionAdditionalData(array $additionalData = [], string $fieldName, mixed $reflectedInstance, string $reflectedMethod)
+    protected function _getCompositionAdditionalData(array $additionalData = [], string $fieldName = null, mixed $reflectedInstance = null, string $reflectedMethod = null)
     {
         $compositionSchema = Schema::get(static::COMPONENT);
 
-        $compositionValuesFields = $compositionSchema->getCompositionValueFields($fieldName);
+        $compositionValuesFields = $fieldName ? $compositionSchema->getCompositionValueFields($fieldName) : $compositionSchema->getAllCompositionValueFields();
 
         /**
          * @var  $key
@@ -44,13 +44,17 @@ trait ColumnCompositionTrait
             }
         }
 
-        $reflectionMethod = new \ReflectionMethod($reflectedInstance, $reflectedMethod);
-        $params = $reflectionMethod->getParameters();
+        if ($reflectedInstance && $reflectedMethod) {
 
-        $paramsKeys = array_map(function (\ReflectionParameter $param){ return $param->getName();}, $params);
+            $reflectionMethod = new \ReflectionMethod($reflectedInstance, $reflectedMethod);
 
-        foreach (array_keys($additionalData) as $key) {
-            if (!in_array($key, $paramsKeys)) unset($additionalData[$key]);
+            $params = $reflectionMethod->getParameters();
+
+            $paramsKeys = array_map(function (\ReflectionParameter $param){ return $param->getName();}, $params);
+
+            foreach (array_keys($additionalData) as $key) {
+                if (!in_array($key, $paramsKeys)) unset($additionalData[$key]);
+            }
         }
 
         return $additionalData;
@@ -61,9 +65,8 @@ trait ColumnCompositionTrait
         if (isset($this->COMPOSED_DATA[$composedComponent])) return $this->COMPOSED_DATA[$composedComponent];
 
         $this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent] = $additionalData;
-        $compositionSchema = CompositionSchema::get(static::COMPONENT);
-        $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
-        $compositionField = $compositionContent->getRelatedField();
+        $schema = Schema::get(static::COMPONENT);
+        $compositionField = $schema->getCompositionField($composedComponent);
         $composedSchema = Schema::get($compositionField->getComponent());
 
         if ($compositionField instanceof ForeignKeyField) {
@@ -104,6 +107,9 @@ trait ColumnCompositionTrait
                         $setter = $identifier->getSetter();
                         $emptyInstance->{$setter}($additionalData[$identifier->getName()]);
                     }
+                } elseif ($identifier->getComponent() === static::COMPONENT) {
+                    $setter = $identifier->getSetterForPrimitiveValue();
+                    $emptyInstance->{$setter}($this->getIdColumnValue());
                 }
             }
 
@@ -137,7 +143,6 @@ trait ColumnCompositionTrait
 
         $composedSchema = Schema::get($compositionField->getComponent());
         $composedField = $composedSchema->getField($composedFieldName);
-        $composedFieldGetter = null;
 
         if (is_object($composedInstance)) {
             if ($composedField) {
@@ -192,7 +197,7 @@ trait ColumnCompositionTrait
         $compositionContent = $compositionSchema->getCompositionContent();
 
         if (is_object($composedInstance)) {
-            $composedFieldName = $compositionContent->fields[$fieldName];
+            $composedFieldName = $compositionContent[$fieldName];
             $composedSchema = Schema::get($compositionField->getComponent());
             $composedField = $composedSchema->getField($composedFieldName);
             $composedFieldSetter = $composedField->getSetterForPrimitiveValue();
@@ -215,12 +220,12 @@ trait ColumnCompositionTrait
     {
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
-        $compositionSchema = CompositionSchema::get(static::COMPONENT);
-        $compositionContent = $compositionSchema->getCompositionContent($composedComponent);
-        $compositionField = $compositionContent->getRelatedField();
+        $compositionSchema = Schema::get(static::COMPONENT);
+        $compositionField = $compositionSchema->getCompositionField($fieldName);
+        $compositionContent = $compositionSchema->getCompositionContent();
 
         if (is_object($composedInstance)) {
-            $composedFieldName = $compositionContent->fields[$fieldName];
+            $composedFieldName = $compositionContent[$fieldName];
             $composedSchema = Schema::get($compositionField->getComponent());
             $composedField = $composedSchema->getField($composedFieldName);
             $composedFieldGetter = $composedField->getGetterForChecker();

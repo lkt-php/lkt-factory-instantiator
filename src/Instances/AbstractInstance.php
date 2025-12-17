@@ -878,9 +878,9 @@ abstract class AbstractInstance
         $schema = Schema::get(static::COMPONENT);
         $fields = $view ? $schema->getViewFields($view) : $schema->getFields();
 //        $composedSchema = CompositionSchema::get(static::COMPONENT);
-        if (!$view) {
+//        if (!$view) {
             $fields = [...$fields, ...$schema->getComposedFields()];
-        }
+//        }
         return $this->patchReadData($this->readFields($fields, $view));
     }
 
