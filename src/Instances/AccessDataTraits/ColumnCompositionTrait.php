@@ -15,7 +15,6 @@ use Lkt\Factory\Schemas\Schema;
 
 trait ColumnCompositionTrait
 {
-    protected array $COMPOSED_DATA_UPDATED = [];
     protected array $COMPOSED_DATA = [];
     protected array $COMPOSED_DATA_ADDITIONAL_DATA = [];
 
@@ -213,9 +212,6 @@ trait ColumnCompositionTrait
             $composedField = $composedSchema->getField($composedFieldName);
             $composedFieldSetter = $composedField->getSetterForPrimitiveValue();
             $composedInstance->{$composedFieldSetter}($value);
-            if (!in_array($composedComponent, $this->COMPOSED_DATA_UPDATED)) {
-                $this->COMPOSED_DATA_UPDATED[] = $composedComponent;
-            }
         }
         return $this;
     }
@@ -251,23 +247,6 @@ trait ColumnCompositionTrait
             if (is_object($composedInstance) && is_callable([$composedInstance, 'save'])) {
                 $composedInstance->save();
             }
-        }
-        foreach ($this->COMPOSED_DATA_UPDATED as $composedComponent) {
-            $schema = Schema::get(static::COMPONENT);
-            $field = $schema->getCompositionField($composedComponent);
-
-            $getter = $field->getGetterForPrimitiveValue();
-            if (!is_callable([$this, $getter])) {
-                return null;
-            }
-
-            $composedInstance = $this->_getCompositionInstance($composedComponent, $this->COMPOSED_DATA_ADDITIONAL_DATA[$composedComponent]);
-//            dd($composedInstance);
-
-            if (is_object($composedInstance) && is_callable([$composedInstance, 'save'])) {
-                $composedInstance->save();
-            }
-            return null;
         }
     }
 }

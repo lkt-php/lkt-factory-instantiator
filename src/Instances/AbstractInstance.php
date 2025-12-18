@@ -292,8 +292,7 @@ abstract class AbstractInstance
         $schema = $dbIntegration->schema;
 
 //        if ($this->accessPolicy) {
-//
-//            dd(['que sí', $this->UPDATED, $this->accessPolicy, $this]);
+//            dump(['que sí', $this->UPDATED, $this->accessPolicy, $this]);
 //        }
 
         // Create only: set default values
