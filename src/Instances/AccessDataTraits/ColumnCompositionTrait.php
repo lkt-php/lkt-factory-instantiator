@@ -4,6 +4,7 @@ namespace Lkt\Factory\Instantiator\Instances\AccessDataTraits;
 
 use Lkt\Factory\Instantiator\Enums\CrudOperation;
 use Lkt\Factory\Instantiator\Instances\AbstractInstance;
+use Lkt\Factory\Schemas\Enums\AccessPolicyEndOfLife;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
@@ -243,8 +244,17 @@ trait ColumnCompositionTrait
 
     protected function _saveCompositionValues()
     {
-        foreach ($this->COMPOSED_DATA as $composedInstance) {
+        $schema = Schema::get(static::COMPONENT);
+
+        foreach ($this->COMPOSED_DATA as $fieldName => $composedInstance) {
+            $relatedAccessPolicy= null;
+            if ($this->accessPolicy) {
+                $field = $schema->getCompositionField($fieldName);
+                $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+            }
+
             if (is_object($composedInstance) && is_callable([$composedInstance, 'save'])) {
+                if ($relatedAccessPolicy) $composedInstance->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextWrite);
                 $composedInstance->save();
             }
         }
