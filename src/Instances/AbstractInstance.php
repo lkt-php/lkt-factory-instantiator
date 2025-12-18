@@ -67,6 +67,7 @@ use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
 use Lkt\Factory\Schemas\Fields\ValueListField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\Factory\Schemas\ValueObjects\AccessPolicy;
 use Lkt\Factory\Schemas\ValueObjects\AccessPolicyUsage;
 use Lkt\Locale\Locale;
 use Lkt\QueryBuilding\Query;
@@ -120,7 +121,7 @@ abstract class AbstractInstance
     protected array $DECRYPT = [];
     protected array $DECRYPT_UPDATED = [];
 
-    protected AccessPolicyUsage|null $accessPolicy;
+    protected AccessPolicyUsage|null $accessPolicy = null;
 
     /**
      * @param string|null $component
@@ -138,9 +139,13 @@ abstract class AbstractInstance
         $this->DATA = $initialData;
     }
 
-    public function setAccessPolicy(string $accessPolicy, AccessPolicyEndOfLife $accessPolicyEndOfLife = AccessPolicyEndOfLife::UntilUpdated): static
+    public function setAccessPolicy(string|AccessPolicy $accessPolicy, AccessPolicyEndOfLife $accessPolicyEndOfLife = AccessPolicyEndOfLife::UntilUpdated): static
     {
-        $this->accessPolicy = new AccessPolicyUsage(static::COMPONENT, $accessPolicy, $accessPolicyEndOfLife);
+        if ($accessPolicy instanceof AccessPolicy) {
+            $this->accessPolicy = new AccessPolicyUsage(static::COMPONENT, $accessPolicy->name, $accessPolicyEndOfLife);
+        } else {
+            $this->accessPolicy = new AccessPolicyUsage(static::COMPONENT, $accessPolicy, $accessPolicyEndOfLife);
+        }
         return $this;
     }
 
@@ -281,19 +286,15 @@ abstract class AbstractInstance
     {
         $isUpdate = !$this->isAnonymous();
 
-
-
         $dbIntegration = ComponentDatabaseIntegration::from(static::COMPONENT);
         $queryBuilder = $dbIntegration->query;
         $connection = $dbIntegration->databaseConnector;
         $schema = $dbIntegration->schema;
 
-//        /**
-//         * @var Schema $schema
-//         * @var DatabaseConnector $connection
-//         * @var Query $queryBuilder
-//         */
-//        list($queryBuilder, $connection, $schema) = Instantiator::getQueryCaller(static::COMPONENT);
+//        if ($this->accessPolicy) {
+//
+//            dd(['que sí', $this->UPDATED, $this->accessPolicy, $this]);
+//        }
 
         // Create only: set default values
         if (!$isUpdate) {
@@ -367,6 +368,8 @@ abstract class AbstractInstance
         $id = 0;
 
         if (count($this->UPDATED) > 0) {
+
+
             // Save current instance process
             $queryBuilder->updateData($parsed);
 
@@ -630,7 +633,12 @@ abstract class AbstractInstance
                 }
             }
         }
+
         $this->_saveCompositionValues();
+
+        if ($this->accessPolicy && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextWrite)) {
+            unset($this->accessPolicy);
+        }
 
         if ($reload) {
             $cacheCode = Instantiator::getInstanceCode(static::COMPONENT, $id);
@@ -929,9 +937,15 @@ abstract class AbstractInstance
     {
         $schema = Schema::get(static::COMPONENT);
 
+        $accessPolicy = null;
+
+        if ($instance->accessPolicy) {
+            $accessPolicy = $schema->getAccessPolicy($instance->accessPolicy->name);
+        }
+
         foreach ($params as $param => $value) {
 
-            if ($schema->hasToExcludeFieldFromViewFeed($view, $param)) continue;
+            if (!$accessPolicy?->includesFieldName($param)) continue;
 
             $field = $schema->getField($param);
 
@@ -1011,6 +1025,12 @@ abstract class AbstractInstance
     }
 
 
+    /**
+     * @param string $view
+     * @return array
+     * @throws SchemaNotDefinedException
+     * @deprecated
+     */
     public function readViewFields(string $view): array
     {
         $schema = Schema::get(static::COMPONENT);
@@ -1043,24 +1063,34 @@ abstract class AbstractInstance
      */
     public function readFields(array $fields = [], string $view = ''): array
     {
+        $schema = Schema::get(static::COMPONENT);
         $r = [];
         foreach ($fields as $field) {
             if ($field instanceof RelatedField) {
                 $getter = $field->getGetterForPrimitiveValue();
                 $items = $this->{$getter}();
 
+                $relatedAccessPolicy = null;
+                if ($this->accessPolicy) {
+                    $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+                }
+
                 if ($field->isSingleMode()) {
                     if (is_object($items)) {
-                        $r[$field->getCustomViewName($view)] = $items->readAsRelated();
+                        if ($relatedAccessPolicy) $items->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
+                        $r[$field->getCustomViewName($view)] = $items->autoRead();
+
                     } elseif ($field->hasToReturnsEmptyOneInSingleMode()) {
                         $anonymous = Instantiator::make($field->getComponent(), 0);
-                        $r[$field->getCustomViewName($view)] = $anonymous->readAsRelated();
+                        if ($relatedAccessPolicy) $anonymous->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
+                        $r[$field->getCustomViewName($view)] = $anonymous->autoRead();
                     }
 
                 } else {
                     $t = [];
                     foreach ($items as $item) {
-                        $t[] = $item->readAsRelated();
+                        if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
+                        $t[] = $item->autoRead();
                     }
                     $r[$field->getCustomViewName($view)] = $t;
                 }
@@ -1071,8 +1101,15 @@ abstract class AbstractInstance
                 $items = $this->{$getter}();
                 if (!is_array($items)) $items = [];
                 $t = [];
+
+                $relatedAccessPolicy = null;
+                if ($this->accessPolicy) {
+                    $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+                }
+
                 foreach ($items as $item) {
-                    $t[] = $item->readAsRelated();
+                    if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
+                    $t[] = $item->autoRead();
                 }
                 $r[$field->getCustomViewName($view)] = $t;
                 $r[$field->getCustomViewName($view) . 'Ids'] = $this->{$getterIds}();
@@ -1081,7 +1118,16 @@ abstract class AbstractInstance
                 $getter = $field->getGetterForData();
                 $getterIds = $field->getGetterForPrimitiveValue();
                 $item = $this->{$getter}();
-                if ($item instanceof AbstractInstance) $item = $item->readAsRelated();
+
+                $relatedAccessPolicy = null;
+                if ($this->accessPolicy) {
+                    $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+                }
+
+                if ($item instanceof AbstractInstance) {
+                    if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
+                    $item = $item->autoRead();
+                }
                 if (!is_array($item)) $item = [];
                 $r[$field->getCustomViewName($view)] = $item;
                 if (method_exists($this, $getterIds)) {
@@ -1171,6 +1217,7 @@ abstract class AbstractInstance
     /**
      * @param AbstractField[] $fields
      * @return array
+     * @deprecated
      */
     public function readAsRelated(): array
     {
