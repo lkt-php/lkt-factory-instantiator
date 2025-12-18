@@ -1066,6 +1066,13 @@ abstract class AbstractInstance
         $schema = Schema::get(static::COMPONENT);
         $r = [];
         foreach ($fields as $field) {
+            $responseKey = $field->getName();
+            if ($this->accessPolicy) {
+                $accessPolicy = $schema->getAccessPolicy($this->accessPolicy->name);
+                $responseKeyAux = $accessPolicy->getFieldPublicName($field);
+                if ($responseKeyAux) $responseKey = $responseKeyAux;
+            }
+
             if ($field instanceof RelatedField) {
                 $getter = $field->getGetterForPrimitiveValue();
                 $items = $this->{$getter}();
@@ -1078,12 +1085,12 @@ abstract class AbstractInstance
                 if ($field->isSingleMode()) {
                     if (is_object($items)) {
                         if ($relatedAccessPolicy) $items->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
-                        $r[$field->getCustomViewName($view)] = $items->autoRead();
+                        $r[$responseKey] = $items->autoRead();
 
                     } elseif ($field->hasToReturnsEmptyOneInSingleMode()) {
                         $anonymous = Instantiator::make($field->getComponent(), 0);
                         if ($relatedAccessPolicy) $anonymous->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
-                        $r[$field->getCustomViewName($view)] = $anonymous->autoRead();
+                        $r[$responseKey] = $anonymous->autoRead();
                     }
 
                 } else {
@@ -1092,7 +1099,7 @@ abstract class AbstractInstance
                         if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
                         $t[] = $item->autoRead();
                     }
-                    $r[$field->getCustomViewName($view)] = $t;
+                    $r[$responseKey] = $t;
                 }
 
             } elseif ($field instanceof ForeignKeysField) {
@@ -1111,8 +1118,8 @@ abstract class AbstractInstance
                     if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
                     $t[] = $item->autoRead();
                 }
-                $r[$field->getCustomViewName($view)] = $t;
-                $r[$field->getCustomViewName($view) . 'Ids'] = $this->{$getterIds}();
+                $r[$responseKey] = $t;
+                $r[$responseKey . 'Ids'] = $this->{$getterIds}();
 
             } elseif ($field instanceof ForeignKeyField) {
                 $getter = $field->getGetterForData();
@@ -1129,19 +1136,19 @@ abstract class AbstractInstance
                     $item = $item->autoRead();
                 }
                 if (!is_array($item)) $item = [];
-                $r[$field->getCustomViewName($view)] = $item;
+                $r[$responseKey] = $item;
                 if (method_exists($this, $getterIds)) {
-                    $r[$field->getCustomViewName($view) . 'Id'] = $this->{$getterIds}();
+                    $r[$responseKey . 'Id'] = $this->{$getterIds}();
                 }
 
                 if ($field->hasOnReadIncludeOptions()) {
-                    $r[$field->getCustomViewName($view) . 'Opts'] = [$item];
+                    $r[$responseKey . 'Opts'] = [$item];
                 }
 
             } elseif ($field instanceof MethodGetterField) {
                 $getter = $field->getName();
 
-                $key = $field->getCustomViewName($view);
+                $key = $responseKey;
                 if (!$key) $key = $field->getColumn();
 
                 $r[$key] = $this->{$getter}();
@@ -1152,7 +1159,7 @@ abstract class AbstractInstance
                     $getter = $field->getGetterForPrimitiveValue().'PublicPath';
                     $val = $this->{$getter}();
                 }
-                $r[$field->getCustomViewName($view)] = $val;
+                $r[$responseKey] = $val;
 
             } elseif ($field instanceof DateTimeField || $field instanceof UnixTimeStampField) {
                 $getter = $field->getGetterForPrimitiveValue();
@@ -1161,10 +1168,10 @@ abstract class AbstractInstance
                 if (!$format) $format = $field->getDefaultReadFormat();
 
                 if ($format !== '') {
-                    $r[$field->getCustomViewName($view)] = $this->{$getter . 'Formatted'}($format);
+                    $r[$responseKey] = $this->{$getter . 'Formatted'}($format);
 
                 } else {
-                    $r[$field->getCustomViewName($view)] = $this->{$getter}();
+                    $r[$responseKey] = $this->{$getter}();
                 }
 
             } elseif ($field instanceof PivotField) {
@@ -1178,34 +1185,34 @@ abstract class AbstractInstance
 
 
                 }
-                $r[$field->getCustomViewName($view)] = $t;
+                $r[$responseKey] = $t;
 
             } elseif ($field instanceof ValueListField) {
                 $getter = $field->getGetterForPrimitiveValue();
 
                 if ($field->readModeIsBoth()) {
-                    $r[$field->getCustomViewName($view)] = $this->{$getter}();
-                    $r[$field->getCustomViewName($view).'List'] = $this->{$getter.'AsArray'}();
+                    $r[$responseKey] = $this->{$getter}();
+                    $r[$responseKey.'List'] = $this->{$getter.'AsArray'}();
 
                 } elseif ($field->readModeIsString()) {
-                    $r[$field->getCustomViewName($view)] = $this->{$getter}();
+                    $r[$responseKey] = $this->{$getter}();
 
                 } elseif ($field->readModeIsArray()) {
-                    $r[$field->getCustomViewName($view)] = $this->{$getter.'AsArray'}();
+                    $r[$responseKey] = $this->{$getter.'AsArray'}();
                 }
 
             } elseif ($field instanceof StringChoiceField) {
                 $getter = $field->getGetterForPrimitiveValue();
                 $value = $this->{$getter}();
-                $r[$field->getCustomViewName($view)] = $value;
+                $r[$responseKey] = $value;
                 $i18nOptions = $field->getI18nViewOptions();
                 if ($i18nOptions !== '') {;
-                    $r[$field->getCustomViewName($view) . 'Text'] = Translations::get($i18nOptions . ".{$value}", Locale::getLangCode());
+                    $r[$responseKey . 'Text'] = Translations::get($i18nOptions . ".{$value}", Locale::getLangCode());
                 }
 
             } elseif ($field instanceof AbstractField) {
                 $getter = $field->getGetterForPrimitiveValue();
-                $r[$field->getCustomViewName($view)] = $this->{$getter}();
+                $r[$responseKey] = $this->{$getter}();
             }
         }
 
