@@ -291,10 +291,16 @@ abstract class AbstractInstance
         $connection = $dbIntegration->databaseConnector;
         $schema = $dbIntegration->schema;
 
-//        if ($this->accessPolicy) {
-//
-//            dump(['que sí', $this->UPDATED, $this->accessPolicy, $this]);
-//        }
+        if ($this->accessPolicy) {
+            $accessPolicyExcludedFields = $schema->getAccessPolicyExcludedFields($this->accessPolicy->name);
+
+            foreach ($accessPolicyExcludedFields as $accessPolicyExcludedField) {
+                $key = $accessPolicyExcludedField->getName();
+                $hasKey = $accessPolicyExcludedField->getGetterForChecker();
+                if (array_key_exists($key, $this->UPDATED)) unset($this->UPDATED[$key]);
+                if (array_key_exists($hasKey, $this->UPDATED)) unset($this->UPDATED[$hasKey]);
+            }
+        }
 
         // Create only: set default values
         if (!$isUpdate) {
