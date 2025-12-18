@@ -873,10 +873,10 @@ abstract class AbstractInstance
     public function autoRead(string $view = ''): array
     {
         $schema = Schema::get(static::COMPONENT);
-        $fields = $view ? $schema->getViewFields($view) : $schema->getFields();
+        $fields = $view ? $schema->getViewFields($view) : $schema->getAllFields();
 //        $composedSchema = CompositionSchema::get(static::COMPONENT);
 //        if (!$view) {
-            $fields = [...$fields, ...$schema->getComposedFields()];
+            $fields = [...$fields, ...$schema->getComposedFields($view)];
 //        }
         return $this->patchReadData($this->readFields($fields, $view));
     }
@@ -1059,10 +1059,12 @@ abstract class AbstractInstance
                 $getter = $field->getGetterForData();
                 $getterIds = $field->getGetterForPrimitiveValue();
                 $item = $this->{$getter}();
-                if ($item) $item = $item->readAsRelated();
-                if (!$item) $item = [];
+                if ($item instanceof AbstractInstance) $item = $item->readAsRelated();
+                if (!is_array($item)) $item = [];
                 $r[$field->getCustomViewName($view)] = $item;
-                $r[$field->getCustomViewName($view) . 'Id'] = $this->{$getterIds}();
+                if (method_exists($this, $getterIds)) {
+                    $r[$field->getCustomViewName($view) . 'Id'] = $this->{$getterIds}();
+                }
 
                 if ($field->hasOnReadIncludeOptions()) {
                     $r[$field->getCustomViewName($view) . 'Opts'] = [$item];
