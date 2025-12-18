@@ -36,6 +36,7 @@ use Lkt\Factory\Instantiator\Instances\AccessDataTraits\ColumnValueListTrait;
 use Lkt\Factory\Instantiator\Instantiator;
 use Lkt\Factory\Instantiator\ValueObjects\ComponentDatabaseIntegration;
 use Lkt\Factory\Instantiator\ValueObjects\MonthlyAccuratePages;
+use Lkt\Factory\Schemas\Enums\AccessPolicyEndOfLife;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\MissedMandatoryValueException;
@@ -66,6 +67,7 @@ use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
 use Lkt\Factory\Schemas\Fields\ValueListField;
 use Lkt\Factory\Schemas\Schema;
+use Lkt\Factory\Schemas\ValueObjects\AccessPolicyUsage;
 use Lkt\Locale\Locale;
 use Lkt\QueryBuilding\Query;
 use Lkt\QueryBuilding\SelectBuilder;
@@ -118,6 +120,8 @@ abstract class AbstractInstance
     protected array $DECRYPT = [];
     protected array $DECRYPT_UPDATED = [];
 
+    protected AccessPolicyUsage|null $accessPolicy;
+
     /**
      * @param string|null $component
      * @param array $initialData
@@ -132,6 +136,12 @@ abstract class AbstractInstance
         }
         $this->TYPE = $component;
         $this->DATA = $initialData;
+    }
+
+    public function setAccessPolicy(string $accessPolicy, AccessPolicyEndOfLife $accessPolicyEndOfLife = AccessPolicyEndOfLife::UntilUpdated): static
+    {
+        $this->accessPolicy = new AccessPolicyUsage(static::COMPONENT, $accessPolicy, $accessPolicyEndOfLife);
+        return $this;
     }
 
     public function setData(array $initialData): static
@@ -873,12 +883,24 @@ abstract class AbstractInstance
     public function autoRead(string $view = ''): array
     {
         $schema = Schema::get(static::COMPONENT);
-        $fields = $view ? $schema->getViewFields($view) : $schema->getAllFields();
-//        $composedSchema = CompositionSchema::get(static::COMPONENT);
-//        if (!$view) {
-            $fields = [...$fields, ...$schema->getComposedFields($view)];
-//        }
-        return $this->patchReadData($this->readFields($fields, $view));
+        if ($this->accessPolicy) {
+            $fields = $schema->getAccessPolicyFields($this->accessPolicy);
+            $composedFields = $schema->getAccessPolicyComposedFields($this->accessPolicy);
+
+        } else {
+            $fields = $view ? $schema->getViewFields($view) : $schema->getAllFields();
+            $composedFields = $schema->getComposedFields($view);
+        }
+
+        $fieldsStack = [...$fields, ...$composedFields];
+
+        $r = $this->patchReadData($this->readFields($fieldsStack, $view));
+
+        if ($this->accessPolicy && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextRead)) {
+            unset($this->accessPolicy);
+        }
+
+        return $r;
     }
 
     public function autoCreate(array $data): static
