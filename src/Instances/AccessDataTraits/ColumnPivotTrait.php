@@ -6,7 +6,6 @@ use Exception;
 use Lkt\Connectors\DatabaseConnections;
 use Lkt\Factory\Instantiator\Helpers\QueryBuilderHelper;
 use Lkt\Factory\Instantiator\Instantiator;
-use Lkt\Factory\Instantiator\ValueObjects\ComponentDatabaseIntegration;
 use Lkt\Factory\Schemas\Exceptions\InvalidComponentException;
 use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
