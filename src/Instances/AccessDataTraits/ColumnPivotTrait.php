@@ -44,14 +44,7 @@ trait ColumnPivotTrait
 
         // Prepare query builder
         $referencedQueryBuilder = QueryBuilderHelper::getComponentQuery($ownField->getComponent());
-//
-//        /** @var Query $queryBuilder */
-//        list($referencedQueryBuilder) = Instantiator::getQueryCaller($ownField->getComponent());
-
         $pivotQueryBuilder = QueryBuilderHelper::getComponentQuery($pivotSchema->getComponent());
-//
-//        /** @var Query $pivotQueryBuilder */
-//        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotSchema->getComponent());
 
         $pivotQueryBuilder
             ->andIntegerEqual($pivotOwnField->getColumn(), $this->getIdColumnValue());
@@ -88,15 +81,7 @@ trait ColumnPivotTrait
 
         // Prepare query builder
         $referencedQueryBuilder = QueryBuilderHelper::getComponentQuery($referencedSchema->getComponent());
-
-//        /** @var Query $queryBuilder */
-//        list($referencedQueryBuilder) = Instantiator::getQueryCaller($referencedSchema->getComponent());
-
-
         $pivotQueryBuilder = QueryBuilderHelper::getComponentQuery($pivotSchema->getComponent());
-//
-//        /** @var Query $pivotQueryBuilder */
-//        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotSchema->getComponent());
 
         $pivotQueryBuilder
             ->setColumns([$pivotField->getColumn()])
@@ -301,10 +286,6 @@ trait ColumnPivotTrait
 
 
         $builder = QueryBuilderHelper::getComponentQuery($toSchema->getComponent());
-//        /**
-//         * @var Query $builder
-//         */
-//        list($builder) = Instantiator::getQueryCaller($toSchema->getComponent());
 
 //        $caller->andIntegerIn($toColumnString, $ids);
         $builder->where(Where::raw($where));

@@ -665,14 +665,6 @@ abstract class AbstractInstance
         $connector = $dbIntegration->databaseConnectorName;
         $schema = $dbIntegration->schema;
 
-//        /**
-//         * @var Schema $schema
-//         * @var DatabaseConnector $connection
-//         * @var Query $caller
-//         */
-//        list($caller, $connection, $schema, $connector) = Instantiator::getQueryCaller(static::COMPONENT);
-
-
         if ($schema->isPivot()) {
             $pivotColumns = $schema->getIdColumn();
             foreach ($pivotColumns as $pivotColumn) {

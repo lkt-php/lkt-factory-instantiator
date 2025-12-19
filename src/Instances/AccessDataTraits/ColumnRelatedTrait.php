@@ -109,11 +109,6 @@ trait ColumnRelatedTrait
         $field = $schema->getRelatedField($column);
 
         $builder = QueryBuilderHelper::getComponentQuery($field->getComponent());
-//        /**
-//         * @var Query $builder
-//         * @var DatabaseConnector $connection
-//         */
-//        list($builder) = Instantiator::getQueryCaller($field->getComponent());
 
         return $this->_prepareQuery($builder, $schema, $field, $forceRefresh, $additionalData);
     }
