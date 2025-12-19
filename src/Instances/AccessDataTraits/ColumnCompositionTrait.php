@@ -59,6 +59,19 @@ trait ColumnCompositionTrait
         return $additionalData;
     }
 
+    protected function _feedAnonymousComposedInstance(AbstractInstance $instance): AbstractInstance
+    {
+        $composedSchema = Schema::get($instance::COMPONENT);
+        $remoteIdentifierPointingToMe = $composedSchema->getOneFieldPointingToComponent(static::COMPONENT);
+
+        if ($remoteIdentifierPointingToMe) {
+            $setter = $remoteIdentifierPointingToMe->getSetterForPrimitiveValue();
+            $instance->{$setter}((int)$this?->getIdColumnValue());
+        }
+
+        return $instance;
+    }
+
     protected function _getCompositionInstance(string $composedComponent, array $additionalData = []): mixed
     {
         if (isset($this->COMPOSED_DATA[$composedComponent])) return $this->COMPOSED_DATA[$composedComponent];
@@ -100,28 +113,28 @@ trait ColumnCompositionTrait
                 if (isset($additionalData[$identifier->getName()])) {
                     if ($additionalData[$identifier->getName()] instanceof AbstractInstance) {
                         $setter = $identifier->getSetterForPrimitiveValue();
-                        $emptyInstance->{$setter}($additionalData[$identifier->getName()]?->getIdColumnValue());
+                        $emptyInstance->{$setter}((int)$additionalData[$identifier->getName()]?->getIdColumnValue());
 
                     } elseif($identifier instanceof ForeignKeyField) {
                         $setter = $identifier->getSetterForPrimitiveValue();
-                        $content = $additionalData[$identifier->getName()] instanceof AbstractInstance ? $additionalData[$identifier->getName()]?->getIdColumnValue() : $additionalData[$identifier->getName()];
+                        $content = (int)$additionalData[$identifier->getName()] instanceof AbstractInstance ? $additionalData[$identifier->getName()]?->getIdColumnValue() : $additionalData[$identifier->getName()];
                         $emptyInstance->{$setter}($content);
 
                     } else {
                         $setter = $identifier->getSetter();
                         $emptyInstance->{$setter}($additionalData[$identifier->getName()]);
                     }
-                } elseif ($identifier->getComponent() === static::COMPONENT) {
+                } elseif (method_exists($identifier, 'getComponent') && $identifier?->getComponent() === static::COMPONENT) {
                     $setter = $identifier->getSetterForPrimitiveValue();
-                    $emptyInstance->{$setter}($this->getIdColumnValue());
+                    $emptyInstance->{$setter}((int)$this->getIdColumnValue());
                 }
             }
 
             $backPointerField = $composedSchema->getOneFieldPointingToComponent(static::COMPONENT);
 
             if ($backPointerField) {
-                $setter = $identifier->getSetterForPrimitiveValue();
-                $emptyInstance->{$setter}($this?->getIdColumnValue());
+                $setter = $backPointerField?->getSetterForPrimitiveValue();
+                if ($setter) $emptyInstance->{$setter}((int)$this?->getIdColumnValue());
             }
 
             $composedInstance = $emptyInstance;
@@ -242,11 +255,17 @@ trait ColumnCompositionTrait
         return false;
     }
 
-    protected function _saveCompositionValues()
+    protected function _saveCompositionValues(bool $isUpdate = false)
     {
         $schema = Schema::get(static::COMPONENT);
 
         foreach ($this->COMPOSED_DATA as $fieldName => $composedInstance) {
+
+            if (!$isUpdate){
+                $this->_feedAnonymousComposedInstance($composedInstance);
+            }
+
+
             $relatedAccessPolicy= null;
             if ($this->accessPolicy) {
                 $field = $schema->getCompositionField($fieldName);

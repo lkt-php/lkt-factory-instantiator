@@ -640,7 +640,7 @@ abstract class AbstractInstance
             }
         }
 
-        $this->_saveCompositionValues();
+        $this->_saveCompositionValues($isUpdate);
 
         if ($this->accessPolicy && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextWrite)) {
             unset($this->accessPolicy);
@@ -951,9 +951,17 @@ abstract class AbstractInstance
 
         foreach ($params as $param => $value) {
 
-            if (!$accessPolicy?->includesFieldName($param)) continue;
+            if ($accessPolicy && (!$accessPolicy?->includesFieldName($param) && !$accessPolicy?->includesCompositionFieldName($param))) continue;
 
             $field = $schema->getField($param);
+            $composedDatum = false;
+
+            if (!$field) {
+                $field = $schema->getCompositionFieldComposingThisField($param);
+                $composedDatum = true;
+            }
+
+            if (!$field) continue;
 
             if ($field instanceof StringChoiceField) {
                 $instance->_setStringChoiceVal($param, clearInput($value));
@@ -971,11 +979,21 @@ abstract class AbstractInstance
                 $instance->_setEncryptVal($param, $value);
 
             } elseif ($field instanceof ForeignKeyField) {
-                if ($field->keyIsId($param)) {
-                    $instance->_setIntegerVal($field->getName() . 'Id', $value);
+
+                if ($composedDatum) {
+
+                    $composedInstance = $instance->_getCompositionInstance($field->getName());
+                    $composedInstance::feedInstance($composedInstance, [
+                        $param => $value,
+                    ]);
 
                 } else {
-//                    $instance->_setForeignListWithData($param, $value);
+                    if ($field->keyIsId($param)) {
+                        $instance->_setIntegerVal($field->getName() . 'Id', $value);
+
+                    } else {
+//                      $instance->_setForeignListWithData($param, $value);
+                    }
                 }
             } elseif ($field instanceof IntegerChoiceField && !$field->isMultiple()) {
                 $instance->_setIntegerChoiceVal($param, (int)$value);
@@ -1002,10 +1020,21 @@ abstract class AbstractInstance
                 $instance->_setRelatedKeysValWithData($param, $value);
 
             } elseif ($field instanceof RelatedField) {
-                if ($field->isSingleMode()) {
-                    $instance->_setRelatedValWithData('', $param, [$value]);
+
+                if ($composedDatum) {
+
+                    $composedInstance = $instance->_getCompositionInstance($field->getName());
+                    $composedInstance::feedInstance($composedInstance, [
+                        $param => $value,
+                    ]);
+
                 } else {
-                    $instance->_setRelatedValWithData('', $param, $value);
+
+                    if ($field->isSingleMode()) {
+                        $instance->_setRelatedValWithData('', $param, [$value]);
+                    } else {
+                        $instance->_setRelatedValWithData('', $param, $value);
+                    }
                 }
 
             } elseif ($field instanceof BooleanField) {
@@ -1091,19 +1120,19 @@ abstract class AbstractInstance
                 if ($field->isSingleMode()) {
                     if (is_object($items)) {
                         if ($relatedAccessPolicy) $items->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
-                        $r[$responseKey] = $items->autoRead();
+                        $r[$responseKey] = $items->readAsRelated();
 
                     } elseif ($field->hasToReturnsEmptyOneInSingleMode()) {
                         $anonymous = Instantiator::make($field->getComponent(), 0);
                         if ($relatedAccessPolicy) $anonymous->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
-                        $r[$responseKey] = $anonymous->autoRead();
+                        $r[$responseKey] = $anonymous->readAsRelated();
                     }
 
                 } else {
                     $t = [];
                     foreach ($items as $item) {
                         if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
-                        $t[] = $item->autoRead();
+                        $t[] = $item->readAsRelated();
                     }
                     $r[$responseKey] = $t;
                 }
@@ -1122,7 +1151,7 @@ abstract class AbstractInstance
 
                 foreach ($items as $item) {
                     if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
-                    $t[] = $item->autoRead();
+                    $t[] = $item->readAsRelated();
                 }
                 $r[$responseKey] = $t;
                 $r[$responseKey . 'Ids'] = $this->{$getterIds}();
@@ -1139,7 +1168,7 @@ abstract class AbstractInstance
 
                 if ($item instanceof AbstractInstance) {
                     if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
-                    $item = $item->autoRead();
+                    $item = $item->readAsRelated();
                 }
                 if (!is_array($item)) $item = [];
                 $r[$responseKey] = $item;
@@ -1235,26 +1264,26 @@ abstract class AbstractInstance
     public function readAsRelated(): array
     {
         $schema = Schema::get(static::COMPONENT);
+        if ($this->accessPolicy) {
+            $fields = $schema->getAccessPolicyFields($this->accessPolicy);
+            $composedFields = $schema->getAccessPolicyComposedFields($this->accessPolicy);
 
-        $r = [];
+        } else if ($schema->hasRelatedAccessPolicy()) {
+            $fields = $schema->getAccessPolicyFields('lkt-related');
+            $composedFields = $schema->getAccessPolicyComposedFields('lkt-related');
 
-        // Option value
-        $field = $schema->getRelatedModeValueField();
-        if ($field instanceof AbstractField) {
-            $getter = $field->getGetterForPrimitiveValue();
-            $r['value'] = $this->{$getter}();
+        } else {
+            $fields = $schema->getSameTableFields();
+            $composedFields = $schema->getComposedFields();
         }
 
-        // Option label
-        $field = $schema->getRelatedModeLabelField();
-        if ($field instanceof AbstractField) {
-            $getter = $field->getGetterForPrimitiveValue();
-            $r['label'] = $this->{$getter}();
-        }
+        $fieldsStack = [...$fields, ...$composedFields];
 
-        // Additional data
-        $fields = $schema->getRelatedModeAdditionalFields();
-        $r = [...$r, ...$this->readFields($fields, 'related')];
+        $r = $this->patchReadData($this->readFields($fieldsStack));
+
+        if ($this->accessPolicy && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextRead)) {
+            unset($this->accessPolicy);
+        }
 
         return $r;
     }
@@ -1275,9 +1304,6 @@ abstract class AbstractInstance
         $positionField = $pivotSchema->getOnePositionField();
 
         $pivotQueryBuilder = QueryBuilderHelper::getComponentQuery($pivotComponent);
-
-//        /** @var Query $queryBuilder */
-//        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
 
         $pivotQueryBuilder->setColumns(["MAX({$positionField->getColumn()}) AS {$positionField->getName()}"]);
 
@@ -1312,13 +1338,7 @@ abstract class AbstractInstance
             $referencedField = $pivotSchema->getPivotLeftIdField();
         }
 
-//        /** @var PivotPositionField $positionField */
-//        $positionField = $pivotSchema->getOnePositionField();
-
         $pivotQueryBuilder = QueryBuilderHelper::getComponentQuery($pivotComponent);
-
-//        /** @var Query $queryBuilder */
-//        list($pivotQueryBuilder) = Instantiator::getQueryCaller($pivotComponent);
 
         $pointingGetter = $pointingField->getGetterForPrimitiveValue();
         $pivotQueryBuilder->andIntegerEqual($pointingField->getColumn(), $this->{$pointingGetter}());
