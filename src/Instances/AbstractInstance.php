@@ -941,34 +941,46 @@ abstract class AbstractInstance
             $accessPolicy = $schema->getAccessPolicy($instance->accessPolicy->name);
         }
 
+        $composedDatum = false;
+
         foreach ($params as $param => $value) {
 
-            if ($accessPolicy && (!$accessPolicy?->includesFieldName($param) && !$accessPolicy?->includesCompositionFieldName($param))) continue;
+            if ($accessPolicy) {
 
-            $field = $schema->getField($param);
-            $composedDatum = false;
+                if (!$accessPolicy?->includesFieldName($param) && !$accessPolicy?->includesCompositionFieldName($param)) continue;
 
-            if (!$field) {
-                $field = $schema->getCompositionFieldComposingThisField($param);
-                $composedDatum = true;
+                $field = $accessPolicy->getSchemaField($schema, $param);
+
+                if (!$field) {
+                    $field = $schema->getSchemaCompositionField($param);
+                    $composedDatum = true;
+                }
+
+            } else {
+                $field = $schema->getField($param);
+
+                if (!$field) {
+                    $field = $schema->getCompositionFieldComposingThisField($param);
+                    $composedDatum = true;
+                }
             }
 
             if (!$field) continue;
 
             if ($field instanceof StringChoiceField) {
-                $instance->_setStringChoiceVal($param, clearInput($value));
+                $instance->_setStringChoiceVal($field->getName(), clearInput($value));
 
             } elseif ($field instanceof ValueListField) {
-                $instance->_setValueListVal($param, $value);
+                $instance->_setValueListVal($field->getName(), $value);
 
             } elseif ($field instanceof StringField || $field instanceof EmailField || $field instanceof HTMLField) {
-                $instance->_setStringVal($param, clearInput($value));
+                $instance->_setStringVal($field->getName(), clearInput($value));
 
             } elseif ($field instanceof DateTimeField) {
-                $instance->_setDateTimeVal($param, $value);
+                $instance->_setDateTimeVal($field->getName(), $value);
 
             } elseif ($field instanceof EncryptField) {
-                $instance->_setEncryptVal($param, $value);
+                $instance->_setEncryptVal($field->getName(), $value);
 
             } elseif ($field instanceof ForeignKeyField) {
 
@@ -976,7 +988,7 @@ abstract class AbstractInstance
 
                     $composedInstance = $instance->_getCompositionInstance($field->getName());
                     $composedInstance::feedInstance($composedInstance, [
-                        $param => $value,
+                        $field->getName() => $value,
                     ]);
 
                 } else {
@@ -988,28 +1000,28 @@ abstract class AbstractInstance
                     }
                 }
             } elseif ($field instanceof IntegerChoiceField && !$field->isMultiple()) {
-                $instance->_setIntegerChoiceVal($param, (int)$value);
+                $instance->_setIntegerChoiceVal($field->getName(), (int)$value);
 
             } elseif ($field instanceof IntegerChoiceField) {
-                $instance->_setIntegerChoiceVal($param, $value);
+                $instance->_setIntegerChoiceVal($field->getName(), $value);
 
             } elseif ($field instanceof IntegerField && !($field instanceof IdField) && !$field->isMultiple()) {
-                $instance->_setIntegerVal($param, (int)$value);
+                $instance->_setIntegerVal($field->getName(), (int)$value);
 
             } elseif ($field instanceof IntegerField && $field->isMultiple()) {
-                $instance->_setIntegerVal($param, $value);
+                $instance->_setIntegerVal($field->getName(), $value);
 
             } elseif ($field instanceof FloatField) {
-                $instance->_setFloatVal($param, (float)$value);
+                $instance->_setFloatVal($field->getName(), (float)$value);
 
             } elseif ($field instanceof JSONField) {
-                $instance->_setJsonVal($param, $value);
+                $instance->_setJsonVal($field->getName(), $value);
 
             } elseif ($field instanceof ColorField) {
-                $instance->_setColorVal($param, $value);
+                $instance->_setColorVal($field->getName(), $value);
 
             } elseif ($field instanceof RelatedKeysField) {
-                $instance->_setRelatedKeysValWithData($param, $value);
+                $instance->_setRelatedKeysValWithData($field->getName(), $value);
 
             } elseif ($field instanceof RelatedField) {
 
@@ -1017,34 +1029,34 @@ abstract class AbstractInstance
 
                     $composedInstance = $instance->_getCompositionInstance($field->getName());
                     $composedInstance::feedInstance($composedInstance, [
-                        $param => $value,
+                        $field->getName() => $value,
                     ]);
 
                 } else {
 
                     if ($field->isSingleMode()) {
-                        $instance->_setRelatedValWithData('', $param, [$value]);
+                        $instance->_setRelatedValWithData('', $field->getName(), [$value]);
                     } else {
-                        $instance->_setRelatedValWithData('', $param, $value);
+                        $instance->_setRelatedValWithData('', $field->getName(), $value);
                     }
                 }
 
             } elseif ($field instanceof BooleanField) {
-                $instance->_setBooleanVal($param, $value);
+                $instance->_setBooleanVal($field->getName(), $value);
 
             } elseif ($field instanceof ForeignKeysField) {
                 if ($field->keyIsIds($param)) {
                     $instance->_setForeignListVal($field->getName(), $value);
 
                 } else {
-                    $instance->_setForeignListWithData($param, $value);
+                    $instance->_setForeignListWithData($field->getName(), $value);
                 }
 
             } elseif ($field instanceof FileField) {
-                $instance->_setFileVal($param, $value);
+                $instance->_setFileVal($field->getName(), $value);
 
             } elseif ($field instanceof PivotField) {
-                $instance->_setPivotSort($param, $value);
+                $instance->_setPivotSort($field->getName(), $value);
             }
         }
 
