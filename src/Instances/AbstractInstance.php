@@ -114,8 +114,6 @@ abstract class AbstractInstance
     protected array $PAGES = [];
     protected array $PAGES_TOTAL = [];
 
-    /** @deprecated */
-    const GENERATED_TYPE = '';
     const COMPONENT = '';
 
     protected array $DECRYPT = [];
@@ -131,9 +129,6 @@ abstract class AbstractInstance
     {
         if (!$component && static::COMPONENT) {
             $component = static::COMPONENT;
-        }
-        if (!$component && static::GENERATED_TYPE) {
-            $component = static::GENERATED_TYPE;
         }
         $this->TYPE = $component;
         $this->DATA = $initialData;
@@ -886,7 +881,7 @@ abstract class AbstractInstance
         return $data;
     }
 
-    public function autoRead(string $view = ''): array
+    public function autoRead(): array
     {
         $schema = Schema::get(static::COMPONENT);
         if (isset($this->accessPolicy)) {
@@ -894,13 +889,13 @@ abstract class AbstractInstance
             $composedFields = $schema->getAccessPolicyComposedFields($this->accessPolicy);
 
         } else {
-            $fields = $view ? $schema->getViewFields($view) : $schema->getAllFields();
-            $composedFields = $schema->getComposedFields($view);
+            $fields = $schema->getAllFields();
+            $composedFields = $schema->getComposedFields();
         }
 
         $fieldsStack = [...$fields, ...$composedFields];
 
-        $r = $this->patchReadData($this->readFields($fieldsStack, $view));
+        $r = $this->patchReadData($this->readFields($fieldsStack));
 
         if (isset($this->accessPolicy) && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextRead)) {
             unset($this->accessPolicy);
@@ -1070,30 +1065,30 @@ abstract class AbstractInstance
      * @throws SchemaNotDefinedException
      * @deprecated
      */
-    public function readViewFields(string $view): array
-    {
-        $schema = Schema::get(static::COMPONENT);
-
-        $r = $this->readFields($schema->getViewFields($view), $view);
-
-        $schema = Schema::get(static::COMPONENT);
-
-        // Option value
-        $field = $schema->getRelatedModeValueField();
-        if ($field instanceof AbstractField) {
-            $getter = $field->getGetterForPrimitiveValue();
-            $r['value'] = $this->{$getter}();
-        }
-
-        // Option label
-        $field = $schema->getRelatedModeLabelField();
-        if ($field instanceof AbstractField) {
-            $getter = $field->getGetterForPrimitiveValue();
-            $r['label'] = $this->{$getter}();
-        }
-
-        return $r;
-    }
+//    public function readViewFields(string $view): array
+//    {
+//        $schema = Schema::get(static::COMPONENT);
+//
+//        $r = $this->readFields($schema->getViewFields($view), $view);
+//
+//        $schema = Schema::get(static::COMPONENT);
+//
+//        // Option value
+//        $field = $schema->getRelatedModeValueField();
+//        if ($field instanceof AbstractField) {
+//            $getter = $field->getGetterForPrimitiveValue();
+//            $r['value'] = $this->{$getter}();
+//        }
+//
+//        // Option label
+//        $field = $schema->getRelatedModeLabelField();
+//        if ($field instanceof AbstractField) {
+//            $getter = $field->getGetterForPrimitiveValue();
+//            $r['label'] = $this->{$getter}();
+//        }
+//
+//        return $r;
+//    }
 
 
     /**
