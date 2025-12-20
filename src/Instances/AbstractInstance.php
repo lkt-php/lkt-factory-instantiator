@@ -889,7 +889,7 @@ abstract class AbstractInstance
     public function autoRead(string $view = ''): array
     {
         $schema = Schema::get(static::COMPONENT);
-        if ($this->accessPolicy) {
+        if (isset($this->accessPolicy)) {
             $fields = $schema->getAccessPolicyFields($this->accessPolicy);
             $composedFields = $schema->getAccessPolicyComposedFields($this->accessPolicy);
 
@@ -902,7 +902,7 @@ abstract class AbstractInstance
 
         $r = $this->patchReadData($this->readFields($fieldsStack, $view));
 
-        if ($this->accessPolicy && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextRead)) {
+        if (isset($this->accessPolicy) && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextRead)) {
             unset($this->accessPolicy);
         }
 
@@ -1100,16 +1100,18 @@ abstract class AbstractInstance
      * @param AbstractField[] $fields
      * @return array
      */
-    public function readFields(array $fields = [], string $view = ''): array
+    public function readFields(array $fields = []): array
     {
         $schema = Schema::get(static::COMPONENT);
         $r = [];
-        foreach ($fields as $field) {
-            $responseKey = $field->getName();
-            if ($this->accessPolicy) {
+        foreach ($fields as $key => $field) {
+            $responseKey = $key ?? $field->getName();
+            if (isset($this->accessPolicy)) {
                 $accessPolicy = $schema->getAccessPolicy($this->accessPolicy->name);
                 $responseKeyAux = $accessPolicy->getFieldPublicName($field);
-                if ($responseKeyAux) $responseKey = $responseKeyAux;
+                if ($responseKeyAux) {
+                    $responseKey = $responseKeyAux;
+                }
             }
 
             if ($field instanceof RelatedField) {
@@ -1117,8 +1119,13 @@ abstract class AbstractInstance
                 $items = $this->{$getter}();
 
                 $relatedAccessPolicy = null;
-                if ($this->accessPolicy) {
+                if (isset($this->accessPolicy)) {
                     $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+
+                }
+
+                if (!$relatedAccessPolicy && Schema::get($field->getComponent())->hasRelatedAccessPolicy()) {
+                    $relatedAccessPolicy = 'lkt-related';
                 }
 
                 if ($field->isSingleMode()) {
@@ -1149,8 +1156,12 @@ abstract class AbstractInstance
                 $t = [];
 
                 $relatedAccessPolicy = null;
-                if ($this->accessPolicy) {
+                if (isset($this->accessPolicy)) {
                     $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+                }
+
+                if (!$relatedAccessPolicy && Schema::get($field->getComponent())->hasRelatedAccessPolicy()) {
+                    $relatedAccessPolicy = 'lkt-related';
                 }
 
                 foreach ($items as $item) {
@@ -1166,8 +1177,13 @@ abstract class AbstractInstance
                 $item = $this->{$getter}();
 
                 $relatedAccessPolicy = null;
-                if ($this->accessPolicy) {
+                if (isset($this->accessPolicy)) {
                     $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+
+                }
+
+                if (!$relatedAccessPolicy && Schema::get($field->getComponent())->hasRelatedAccessPolicy()) {
+                    $relatedAccessPolicy = 'lkt-related';
                 }
 
                 if ($item instanceof AbstractInstance) {
@@ -1275,6 +1291,7 @@ abstract class AbstractInstance
         } else if ($schema->hasRelatedAccessPolicy()) {
             $fields = $schema->getAccessPolicyFields('lkt-related');
             $composedFields = $schema->getAccessPolicyComposedFields('lkt-related');
+            $this->setAccessPolicy('lkt-related', AccessPolicyEndOfLife::UntilNextRead);
 
         } else {
             $fields = $schema->getSameTableFields();
