@@ -881,7 +881,7 @@ abstract class AbstractInstance
         return $data;
     }
 
-    public function autoRead(): array
+    public function autoRead(array $internalMethodsArguments = []): array
     {
         $schema = Schema::get(static::COMPONENT);
         if (isset($this->accessPolicy)) {
@@ -895,7 +895,7 @@ abstract class AbstractInstance
 
         $fieldsStack = [...$fields, ...$composedFields];
 
-        $r = $this->patchReadData($this->readFields($fieldsStack));
+        $r = $this->patchReadData($this->readFields($fieldsStack, $internalMethodsArguments));
 
         if (isset($this->accessPolicy) && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextRead)) {
             unset($this->accessPolicy);
@@ -1095,7 +1095,7 @@ abstract class AbstractInstance
      * @param AbstractField[] $fields
      * @return array
      */
-    public function readFields(array $fields = []): array
+    public function readFields(array $fields = [], array $internalMethodsArguments = []): array
     {
         $schema = Schema::get(static::COMPONENT);
         $r = [];
@@ -1110,13 +1110,44 @@ abstract class AbstractInstance
             }
 
             if ($field instanceof RelatedField) {
+                $additionalData = $internalMethodsArguments;
+                $relatedSchema = Schema::get($field->getComponent());
+
+                if ($relatedSchema->hasComplexPrimaryKey()) {
+                    $relatedFieldPointingToMe = $relatedSchema->getField($field->getColumn());
+
+                    if ($relatedFieldPointingToMe) {
+                        $additionalData[$relatedFieldPointingToMe->getName()] = $this->getIdColumnValue();
+                    }
+                }
+
                 $getter = $field->getGetterForPrimitiveValue();
-                $items = $this->{$getter}();
+
+                $additionalData = $this->prepareOwnMethodCallArguments($getter, $additionalData);
+
+                if ($this->satisfiedOwnMethodCallArguments($getter, $additionalData)) {
+                    $items = $this->callOwnMethod($getter, $additionalData);
+                } else {
+                    continue;
+                }
+
+
+//                try {
+//                    $items = $this->{$getter}();
+//                } catch (\Error $error) {
+//                    $items = $this->_getRelatedVal($field->getComponent(), $field->getName(), false, $additionalData);
+//                }
+
+//                if (count($additionalData) > 0) {
+//                    $items = call_user_func_array([$this, $getter], $additionalData);
+//                } else {
+//                    $items = $this->{$getter}();
+//                }
+
 
                 $relatedAccessPolicy = null;
                 if (isset($this->accessPolicy)) {
                     $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
-
                 }
 
                 if (!$relatedAccessPolicy && Schema::get($field->getComponent())->hasRelatedAccessPolicy()) {
@@ -1155,7 +1186,7 @@ abstract class AbstractInstance
                     $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
                 }
 
-                if (!$relatedAccessPolicy && Schema::get($field->getComponent())->hasRelatedAccessPolicy()) {
+                if (!$relatedAccessPolicy && $field->getComponent() && Schema::get($field->getComponent())->hasRelatedAccessPolicy()) {
                     $relatedAccessPolicy = 'lkt-related';
                 }
 
@@ -1261,8 +1292,43 @@ abstract class AbstractInstance
                 }
 
             } elseif ($field instanceof AbstractField) {
+
+                $additionalData = $internalMethodsArguments;
+
+
                 $getter = $field->getGetterForPrimitiveValue();
-                $r[$responseKey] = $this->{$getter}();
+
+                $additionalData = $this->prepareOwnMethodCallArguments($getter, $additionalData);
+
+                if ($this->satisfiedOwnMethodCallArguments($getter, $additionalData)) {
+                    $r[$responseKey] = $this->callOwnMethod($getter, $additionalData);
+                }
+
+
+//                if ($schema->isComposedField($field->getName())) {
+//                    $compositionField = $schema->getCompositionFieldComposingThisField($field->getName());
+//                    $relatedSchema = Schema::get($compositionField->getComponent());
+//                    $additionalData = [];
+//                    if ($relatedSchema->hasComplexPrimaryKey()) {
+//                        $relatedFieldPointingToMe = $relatedSchema->getField($field->getColumn());
+//                        $identifiers = $relatedSchema->getIdentifiers();
+//
+//                        if ($relatedFieldPointingToMe) {
+//                            $additionalData[$relatedFieldPointingToMe->getName()] = $this->getIdColumnValue();
+//                        }
+//
+//                        foreach ($identifiers as $identifier) {
+//                            if ($identifier->getName() === $relatedFieldPointingToMe->getName()) continue;
+//
+//                            $additionalData[$identifier->getName()] = null;
+//                        }
+//                    }
+//                    $r[$responseKey] = $this->_getCompositionVal($compositionField->getName(), $field->getName(), $additionalData);
+//
+//                } else {
+//                    $getter = $field->getGetterForPrimitiveValue();
+//                    $r[$responseKey] = $this->{$getter}();
+//                }
             }
         }
 
@@ -1276,7 +1342,7 @@ abstract class AbstractInstance
      * @return array
      * @deprecated
      */
-    public function readAsRelated(): array
+    public function readAsRelated(array $internalMethodsArguments = []): array
     {
         $schema = Schema::get(static::COMPONENT);
         if ($this->accessPolicy) {
@@ -1295,7 +1361,7 @@ abstract class AbstractInstance
 
         $fieldsStack = [...$fields, ...$composedFields];
 
-        $r = $this->patchReadData($this->readFields($fieldsStack));
+        $r = $this->patchReadData($this->readFields($fieldsStack, $internalMethodsArguments));
 
         if ($this->accessPolicy && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextRead)) {
             unset($this->accessPolicy);
@@ -1366,5 +1432,46 @@ abstract class AbstractInstance
         $instance = $anonymous::getOne($pivotQueryBuilder);
         $instance->delete();
         return $this;
+    }
+
+    protected function prepareOwnMethodCallArguments(string $method, array $args): array
+    {
+        $reflectionMethod = new \ReflectionMethod($this, $method);
+
+        $params = $reflectionMethod->getParameters();
+
+        $paramsKeys = array_map(function (\ReflectionParameter $param){ return $param->getName();}, $params);
+
+        foreach (array_keys($args) as $key) {
+            if (!in_array($key, $paramsKeys)) unset($args[$key]);
+        }
+
+        return $args;
+    }
+
+    protected function satisfiedOwnMethodCallArguments(string $method, array $args): bool
+    {
+        $reflectionMethod = new \ReflectionMethod($this, $method);
+
+        $params = $reflectionMethod->getParameters();
+
+        $requiredParams = array_filter($params, function (\ReflectionParameter $param) { return !$param->isOptional(); });
+
+        $paramsKeys = array_map(function (\ReflectionParameter $param){ return $param->getName();}, $requiredParams);
+
+        if (count($args) !== count($paramsKeys)) return false;
+
+        foreach (array_keys($args) as $key) {
+            if (!in_array($key, $paramsKeys)) return false;
+        }
+        return true;
+    }
+
+    protected function callOwnMethod(string $method, array $args): mixed
+    {
+        if (count($args) > 0) {
+            return call_user_func_array([$this, $method], $args);
+        }
+        return $this->{$method}();
     }
 }

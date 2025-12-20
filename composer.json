@@ -30,5 +30,10 @@
       "Lkt\\Factory\\Instantiator\\": "src",
       "Lkt\\Factory\\Instantiator\\Tests\\": "tests"
     }
+  },
+  "repositories": [{
+    "type": "path",
+    "url": "../../lkt-php/factory-schemas"
   }
+  ]
 }

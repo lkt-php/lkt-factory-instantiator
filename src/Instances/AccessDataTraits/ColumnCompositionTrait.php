@@ -99,6 +99,7 @@ trait ColumnCompositionTrait
         } else {
             $composedInstance = $this->{$getter}();
         }
+
         if (is_array($composedInstance)) {
             if (count($composedInstance) > 0) $composedInstance = $composedInstance[0];
             else  $composedInstance = null;

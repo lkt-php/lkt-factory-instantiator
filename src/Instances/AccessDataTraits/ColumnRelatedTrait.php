@@ -75,6 +75,7 @@ trait ColumnRelatedTrait
         }
 
         if (!$forceRefresh && isset($this->RELATED_DATA[$column])) {
+            if (is_array($this->RELATED_DATA[$column])) return $this->RELATED_DATA[$column][0];
             return $this->RELATED_DATA[$column];
         }
 
