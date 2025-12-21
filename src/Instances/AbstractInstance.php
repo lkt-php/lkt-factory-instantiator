@@ -962,6 +962,80 @@ abstract class AbstractInstance
 
             if (!$field) continue;
 
+            // Handle custom related field logic
+            if ($field instanceof ForeignKeyField) {
+
+                if ($composedDatum) {
+
+                    $composedInstance = $instance->_getCompositionInstance($field->getName());
+                    $composedInstance::feedInstance($composedInstance, [
+                        $field->getName() => $value,
+                    ]);
+
+                } else {
+                    if ($field->keyIsId($param)) {
+                        $instance->_setIntegerVal($field->getName() . 'Id', $value);
+
+                    } else {
+//                      $instance->_setForeignListWithData($param, $value);
+                    }
+                }
+
+                continue;
+
+            } elseif ($field instanceof RelatedField) {
+
+                if ($composedDatum) {
+
+                    $composedInstance = $instance->_getCompositionInstance($field->getName());
+                    $composedInstance::feedInstance($composedInstance, [
+                        $field->getName() => $value,
+                    ]);
+
+                } else {
+
+                    if ($field->isSingleMode()) {
+                        $instance->_setRelatedValWithData('', $field->getName(), [$value]);
+                    } else {
+                        $instance->_setRelatedValWithData('', $field->getName(), $value);
+                    }
+                }
+
+                continue;
+            } elseif ($field instanceof ForeignKeysField) {
+                if ($field->keyIsIds($param)) {
+                    $instance->_setForeignListVal($field->getName(), $value);
+
+                } else {
+                    $instance->_setForeignListWithData($field->getName(), $value);
+                }
+                continue;
+            } elseif ($field instanceof PivotField) {
+                $instance->_setPivotSort($field->getName(), $value);
+                continue;
+            }
+
+            // Common primitive value fields (included composed elements thanks to generated setterdetection  approach)
+            $setter = $field->getSetterForPrimitiveValue();
+            $methodCallData = [$field->getName() => $value];
+
+            if ($field instanceof StringField || $field instanceof StringChoiceField || $field instanceof EmailField || $field instanceof HTMLField) {
+                $methodCallData = [$field->getName() => clearInput($value)];
+
+            } elseif ($field instanceof IntegerField && !($field instanceof IdField) && !$field->isMultiple()) {
+                $methodCallData = [$field->getName() => (int)$value];
+
+            } elseif ($field instanceof FloatField) {
+                $methodCallData = [$field->getName() => (float)$value];
+            }
+
+            $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData);
+            if (!$instance->satisfiedOwnMethodCallArguments($setter, $methodCallData)) {
+                continue;
+            }
+            $instance->callOwnMethod($setter, $methodCallData);
+            continue;
+
             if ($field instanceof StringChoiceField) {
                 $instance->_setStringChoiceVal($field->getName(), clearInput($value));
 

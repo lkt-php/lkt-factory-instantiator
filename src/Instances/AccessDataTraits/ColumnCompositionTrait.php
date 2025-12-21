@@ -243,11 +243,11 @@ trait ColumnCompositionTrait
         $composedInstance = $this->_getCompositionInstance($composedComponent, $additionalData);
 
         $compositionSchema = Schema::get(static::COMPONENT);
-        $compositionField = $compositionSchema->getCompositionField($fieldName);
-        $compositionContent = $compositionSchema->getCompositionContent();
+        $compositionField = $compositionSchema->getCompositionField($composedComponent);
+        $compositionContent = $compositionField->getCompositionContent();
+        $composedFieldName = $compositionContent[$fieldName];
 
         if (is_object($composedInstance)) {
-            $composedFieldName = $compositionContent[$fieldName];
             $composedSchema = Schema::get($compositionField->getComponent());
             $composedField = $composedSchema->getField($composedFieldName);
             $composedFieldGetter = $composedField->getGetterForChecker();
