@@ -1037,7 +1037,14 @@ abstract class AbstractInstance
                 }
 
             } elseif ($field instanceof BooleanField) {
-                $instance->_setBooleanVal($field->getName(), $value);
+                $setter = $field->getSetterForPrimitiveValue();
+                $methodCallData = [$field->getName() => $value];
+                $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData);
+                if ($instance->satisfiedOwnMethodCallArguments($setter, $methodCallData)) {
+                    $instance->callOwnMethod($setter, $methodCallData);
+                } else {
+                    $instance->_setBooleanVal($field->getName(), $value);
+                }
 
             } elseif ($field instanceof ForeignKeysField) {
                 if ($field->keyIsIds($param)) {
