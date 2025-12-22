@@ -266,8 +266,7 @@ trait ColumnCompositionTrait
                 $this->_feedAnonymousComposedInstance($composedInstance);
             }
 
-
-            $relatedAccessPolicy= null;
+            $relatedAccessPolicy = null;
             if ($this->accessPolicy) {
                 $field = $schema->getCompositionField($fieldName);
                 $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);

@@ -936,8 +936,6 @@ abstract class AbstractInstance
             $accessPolicy = $schema->getAccessPolicy($instance->accessPolicy->name);
         }
 
-        $composedDatum = false;
-
         foreach ($params as $param => $value) {
 
             if ($accessPolicy) {
@@ -945,91 +943,115 @@ abstract class AbstractInstance
                 if (!$accessPolicy?->includesFieldName($param) && !$accessPolicy?->includesCompositionFieldName($param)) continue;
 
                 $field = $accessPolicy->getSchemaField($schema, $param);
-
-                if (!$field) {
-                    $field = $schema->getSchemaCompositionField($param);
-                    $composedDatum = true;
-                }
+                if (!$field) $field = $accessPolicy->getSchemaCompositionField($schema, $param);
 
             } else {
                 $field = $schema->getField($param);
-
-                if (!$field) {
-                    $field = $schema->getCompositionFieldComposingThisField($param);
-                    $composedDatum = true;
-                }
+                if (!$field) $field = $schema->getCompositionFieldComposingThisField($param);
             }
 
             if (!$field) continue;
 
-            // Handle custom related field logic
-            if ($field instanceof ForeignKeyField) {
+            $composedDatum = !$schema->hasFieldDefined($param);
 
-                if ($composedDatum) {
-
-                    $composedInstance = $instance->_getCompositionInstance($field->getName());
-                    $composedInstance::feedInstance($composedInstance, [
-                        $field->getName() => $value,
-                    ]);
-
-                } else {
-                    if ($field->keyIsId($param)) {
-                        $instance->_setIntegerVal($field->getName() . 'Id', $value);
-
-                    } else {
-//                      $instance->_setForeignListWithData($param, $value);
-                    }
-                }
-
-                continue;
-
-            } elseif ($field instanceof RelatedField) {
-
-                if ($composedDatum) {
-
-                    $composedInstance = $instance->_getCompositionInstance($field->getName());
-                    $composedInstance::feedInstance($composedInstance, [
-                        $field->getName() => $value,
-                    ]);
-
-                } else {
-
-                    if ($field->isSingleMode()) {
-                        $instance->_setRelatedValWithData('', $field->getName(), [$value]);
-                    } else {
-                        $instance->_setRelatedValWithData('', $field->getName(), $value);
-                    }
-                }
-
-                continue;
-            } elseif ($field instanceof ForeignKeysField) {
-                if ($field->keyIsIds($param)) {
-                    $instance->_setForeignListVal($field->getName(), $value);
-
-                } else {
-                    $instance->_setForeignListWithData($field->getName(), $value);
-                }
-                continue;
-            } elseif ($field instanceof PivotField) {
-                $instance->_setPivotSort($field->getName(), $value);
+            if ($composedDatum && ($field instanceof RelatedField || $field instanceof ForeignKeyField)) {
+                $composedInstance = $instance->_getCompositionInstance($field->getName());
+                $composedInstance::feedInstance($composedInstance, [
+                    $field->getName() => $value,
+                ]);
                 continue;
             }
 
-            // Common primitive value fields (included composed elements thanks to generated setterdetection  approach)
-            $setter = $field->getSetterForPrimitiveValue();
-            $methodCallData = [$field->getName() => $value];
 
-            if ($field instanceof StringField || $field instanceof StringChoiceField || $field instanceof EmailField || $field instanceof HTMLField) {
+            // Handle custom related field logic
+            if ($field instanceof ForeignKeyField) {
+//                if ($field->keyIsId($param)) {
+//                    $instance->_setIntegerVal($field->getName() . 'Id', $value);
+//
+//                } else {
+////                      $instance->_setForeignListWithData($param, $value);
+//                }
+//
+//                continue;
+
+            } elseif ($field instanceof RelatedField) {
+
+//                $setter = '_setRelatedValWithData';
+//                $methodCallData = ['type' => '', 'column' => $field->getName(), 'data' => $value];
+//                if ($field->isSingleMode()) {
+//                    $methodCallData['data'] = [$methodCallData['data']];
+//                }
+//
+//                $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData);
+//                if (!$instance->satisfiedOwnMethodCallArguments($setter, $methodCallData)) {
+//                    continue;
+//                }
+//
+//                $instance->callOwnMethod($setter, $methodCallData);
+////
+////                    if ($field->isSingleMode()) {
+////                        $instance->_setRelatedValWithData('', $field->getName(), [$value]);
+////                    } else {
+////                        $instance->_setRelatedValWithData('', $field->getName(), $value);
+////                    }
+//
+//                continue;
+            } elseif ($field instanceof ForeignKeysField) {
+//                if ($field->keyIsIds($param)) {
+//                    $instance->_setForeignListVal($field->getName(), $value);
+//
+//                } else {
+//                    $instance->_setForeignListWithData($field->getName(), $value);
+//                }
+//                continue;
+            }
+
+            // Common primitive value fields (included composed elements thanks to generated setter detection  approach)
+            $setter = $field->getSetterForPrimitiveValue();
+
+            if ($field instanceof RelatedField) {
+                $setter = '_setRelatedValWithData';
+                $methodCallData = ['type' => '', 'column' => $field->getName(), 'data' => $value];
+                if ($field->isSingleMode()) {
+                    $methodCallData['data'] = [$methodCallData['data']];
+                }
+
+            } elseif ($field instanceof ForeignKeyField) {
+                if ($field->keyIsId($param)) {
+                    $setter = '_setIntegerVal';
+                    $methodCallData = ['fieldName' => $field->getName() . 'Id', 'value' => $value];
+                } else {
+                    continue;
+                }
+
+            } elseif ($field instanceof ForeignKeysField) {
+                if ($field->keyIsIds($param)) {
+                    $setter = '_setForeignListVal';
+                    $methodCallData = ['fieldName' => $field->getName() . 'Id', 'value' => $value];
+
+                } else {
+                    $setter = '_setForeignListWithData';
+                    $methodCallData = ['fieldName' => $field->getName() . 'Id', 'data' => $value];
+                }
+
+            } elseif ($field instanceof PivotField) {
+                $setter = '_setPivotSort';
+                $methodCallData = ['column' => $field->getName(), 'data' => $value];
+
+            } else if ($field instanceof StringField || $field instanceof HTMLField) {
                 $methodCallData = [$field->getName() => clearInput($value)];
 
-            } elseif ($field instanceof IntegerField && !($field instanceof IdField) && !$field->isMultiple()) {
+            } elseif ($field instanceof IntegerField && !$field instanceof IdField && !$field->isMultiple()) {
                 $methodCallData = [$field->getName() => (int)$value];
 
             } elseif ($field instanceof FloatField) {
                 $methodCallData = [$field->getName() => (float)$value];
+
+            } else {
+                $methodCallData = [$field->getName() => $value];
             }
 
-            $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData);
+            $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData, $field->getName());
             if (!$instance->satisfiedOwnMethodCallArguments($setter, $methodCallData)) {
                 continue;
             }
@@ -1204,7 +1226,7 @@ abstract class AbstractInstance
 
                 $getter = $field->getGetterForPrimitiveValue();
 
-                $additionalData = $this->prepareOwnMethodCallArguments($getter, $additionalData);
+                $additionalData = $this->prepareOwnMethodCallArguments($getter, $additionalData, $field->getName());
 
                 if ($this->satisfiedOwnMethodCallArguments($getter, $additionalData)) {
                     $items = $this->callOwnMethod($getter, $additionalData);
@@ -1379,7 +1401,7 @@ abstract class AbstractInstance
 
                 $getter = $field->getGetterForPrimitiveValue();
 
-                $additionalData = $this->prepareOwnMethodCallArguments($getter, $additionalData);
+                $additionalData = $this->prepareOwnMethodCallArguments($getter, $additionalData, $field->getName());
 
                 if ($this->satisfiedOwnMethodCallArguments($getter, $additionalData)) {
                     $r[$responseKey] = $this->callOwnMethod($getter, $additionalData);
@@ -1515,7 +1537,7 @@ abstract class AbstractInstance
         return $this;
     }
 
-    protected function prepareOwnMethodCallArguments(string $method, array $args): array
+    protected function prepareOwnMethodCallArguments(string $method, array $args, string $fieldName): array
     {
         $reflectionMethod = new \ReflectionMethod($this, $method);
 
@@ -1536,14 +1558,10 @@ abstract class AbstractInstance
 
         $params = $reflectionMethod->getParameters();
 
-        $requiredParams = array_filter($params, function (\ReflectionParameter $param) { return !$param->isOptional(); });
+//        if (count($args) < count($params)) return false;
 
-        $paramsKeys = array_map(function (\ReflectionParameter $param){ return $param->getName();}, $requiredParams);
-
-        if (count($args) !== count($paramsKeys)) return false;
-
-        foreach (array_keys($args) as $key) {
-            if (!in_array($key, $paramsKeys)) return false;
+        foreach ($params as $param) {
+            if (!$param->isOptional() && !isset($args[$param->getName()])) return false;
         }
         return true;
     }
