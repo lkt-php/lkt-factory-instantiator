@@ -390,7 +390,9 @@ abstract class AbstractInstance
                 } else {
                     $idColumn = $schema->getField($origIdColumn);
                     $idColumn = $idColumn->getColumn();
-                    $queryBuilder->andIntegerEqual($idColumn, $this->DATA[$origIdColumn]);
+                    $idValue = $this->getIdColumnValue();
+                    if (!$idValue) $idValue = $this->DATA[$origIdColumn];
+                    $queryBuilder->andIntegerEqual($idColumn, $idValue);
                     $query = $connection->getUpdateQuery($queryBuilder);
                 }
             } else {
