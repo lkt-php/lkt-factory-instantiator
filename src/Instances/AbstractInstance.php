@@ -42,26 +42,19 @@ use Lkt\Factory\Schemas\Exceptions\InvalidSchemaAppClassException;
 use Lkt\Factory\Schemas\Exceptions\MissedMandatoryValueException;
 use Lkt\Factory\Schemas\Exceptions\SchemaNotDefinedException;
 use Lkt\Factory\Schemas\Fields\AbstractField;
-use Lkt\Factory\Schemas\Fields\BooleanField;
-use Lkt\Factory\Schemas\Fields\ColorField;
 use Lkt\Factory\Schemas\Fields\DateTimeField;
-use Lkt\Factory\Schemas\Fields\EmailField;
-use Lkt\Factory\Schemas\Fields\EncryptField;
 use Lkt\Factory\Schemas\Fields\FileField;
 use Lkt\Factory\Schemas\Fields\FloatField;
 use Lkt\Factory\Schemas\Fields\ForeignKeyField;
 use Lkt\Factory\Schemas\Fields\ForeignKeysField;
 use Lkt\Factory\Schemas\Fields\HTMLField;
 use Lkt\Factory\Schemas\Fields\IdField;
-use Lkt\Factory\Schemas\Fields\IntegerChoiceField;
 use Lkt\Factory\Schemas\Fields\IntegerField;
-use Lkt\Factory\Schemas\Fields\JSONField;
 use Lkt\Factory\Schemas\Fields\MethodGetterField;
 use Lkt\Factory\Schemas\Fields\PivotField;
 use Lkt\Factory\Schemas\Fields\PivotLeftIdField;
 use Lkt\Factory\Schemas\Fields\PivotPositionField;
 use Lkt\Factory\Schemas\Fields\RelatedField;
-use Lkt\Factory\Schemas\Fields\RelatedKeysField;
 use Lkt\Factory\Schemas\Fields\StringChoiceField;
 use Lkt\Factory\Schemas\Fields\StringField;
 use Lkt\Factory\Schemas\Fields\UnixTimeStampField;
@@ -954,56 +947,13 @@ abstract class AbstractInstance
 
             $composedDatum = !$schema->hasFieldDefined($param);
 
+            // Composed related data
             if ($composedDatum && ($field instanceof RelatedField || $field instanceof ForeignKeyField)) {
                 $composedInstance = $instance->_getCompositionInstance($field->getName());
                 $composedInstance::feedInstance($composedInstance, [
                     $field->getName() => $value,
                 ]);
                 continue;
-            }
-
-
-            // Handle custom related field logic
-            if ($field instanceof ForeignKeyField) {
-//                if ($field->keyIsId($param)) {
-//                    $instance->_setIntegerVal($field->getName() . 'Id', $value);
-//
-//                } else {
-////                      $instance->_setForeignListWithData($param, $value);
-//                }
-//
-//                continue;
-
-            } elseif ($field instanceof RelatedField) {
-
-//                $setter = '_setRelatedValWithData';
-//                $methodCallData = ['type' => '', 'column' => $field->getName(), 'data' => $value];
-//                if ($field->isSingleMode()) {
-//                    $methodCallData['data'] = [$methodCallData['data']];
-//                }
-//
-//                $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData);
-//                if (!$instance->satisfiedOwnMethodCallArguments($setter, $methodCallData)) {
-//                    continue;
-//                }
-//
-//                $instance->callOwnMethod($setter, $methodCallData);
-////
-////                    if ($field->isSingleMode()) {
-////                        $instance->_setRelatedValWithData('', $field->getName(), [$value]);
-////                    } else {
-////                        $instance->_setRelatedValWithData('', $field->getName(), $value);
-////                    }
-//
-//                continue;
-            } elseif ($field instanceof ForeignKeysField) {
-//                if ($field->keyIsIds($param)) {
-//                    $instance->_setForeignListVal($field->getName(), $value);
-//
-//                } else {
-//                    $instance->_setForeignListWithData($field->getName(), $value);
-//                }
-//                continue;
             }
 
             // Common primitive value fields (included composed elements thanks to generated setter detection  approach)
@@ -1056,143 +1006,10 @@ abstract class AbstractInstance
                 continue;
             }
             $instance->callOwnMethod($setter, $methodCallData);
-            continue;
-
-            if ($field instanceof StringChoiceField) {
-                $instance->_setStringChoiceVal($field->getName(), clearInput($value));
-
-            } elseif ($field instanceof ValueListField) {
-                $instance->_setValueListVal($field->getName(), $value);
-
-            } elseif ($field instanceof StringField || $field instanceof EmailField || $field instanceof HTMLField) {
-                $instance->_setStringVal($field->getName(), clearInput($value));
-
-            } elseif ($field instanceof DateTimeField) {
-                $instance->_setDateTimeVal($field->getName(), $value);
-
-            } elseif ($field instanceof EncryptField) {
-                $instance->_setEncryptVal($field->getName(), $value);
-
-            } elseif ($field instanceof ForeignKeyField) {
-
-                if ($composedDatum) {
-
-                    $composedInstance = $instance->_getCompositionInstance($field->getName());
-                    $composedInstance::feedInstance($composedInstance, [
-                        $field->getName() => $value,
-                    ]);
-
-                } else {
-                    if ($field->keyIsId($param)) {
-                        $instance->_setIntegerVal($field->getName() . 'Id', $value);
-
-                    } else {
-//                      $instance->_setForeignListWithData($param, $value);
-                    }
-                }
-            } elseif ($field instanceof IntegerChoiceField && !$field->isMultiple()) {
-                $instance->_setIntegerChoiceVal($field->getName(), (int)$value);
-
-            } elseif ($field instanceof IntegerChoiceField) {
-                $instance->_setIntegerChoiceVal($field->getName(), $value);
-
-            } elseif ($field instanceof IntegerField && !($field instanceof IdField) && !$field->isMultiple()) {
-                $instance->_setIntegerVal($field->getName(), (int)$value);
-
-            } elseif ($field instanceof IntegerField && $field->isMultiple()) {
-                $instance->_setIntegerVal($field->getName(), $value);
-
-            } elseif ($field instanceof FloatField) {
-                $instance->_setFloatVal($field->getName(), (float)$value);
-
-            } elseif ($field instanceof JSONField) {
-                $instance->_setJsonVal($field->getName(), $value);
-
-            } elseif ($field instanceof ColorField) {
-                $instance->_setColorVal($field->getName(), $value);
-
-            } elseif ($field instanceof RelatedKeysField) {
-                $instance->_setRelatedKeysValWithData($field->getName(), $value);
-
-            } elseif ($field instanceof RelatedField) {
-
-                if ($composedDatum) {
-
-                    $composedInstance = $instance->_getCompositionInstance($field->getName());
-                    $composedInstance::feedInstance($composedInstance, [
-                        $field->getName() => $value,
-                    ]);
-
-                } else {
-
-                    if ($field->isSingleMode()) {
-                        $instance->_setRelatedValWithData('', $field->getName(), [$value]);
-                    } else {
-                        $instance->_setRelatedValWithData('', $field->getName(), $value);
-                    }
-                }
-
-            } elseif ($field instanceof BooleanField) {
-                $setter = $field->getSetterForPrimitiveValue();
-                $methodCallData = [$field->getName() => $value];
-                $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData);
-                if ($instance->satisfiedOwnMethodCallArguments($setter, $methodCallData)) {
-                    $instance->callOwnMethod($setter, $methodCallData);
-                } else {
-                    $instance->_setBooleanVal($field->getName(), $value);
-                }
-
-            } elseif ($field instanceof ForeignKeysField) {
-                if ($field->keyIsIds($param)) {
-                    $instance->_setForeignListVal($field->getName(), $value);
-
-                } else {
-                    $instance->_setForeignListWithData($field->getName(), $value);
-                }
-
-            } elseif ($field instanceof FileField) {
-                $instance->_setFileVal($field->getName(), $value);
-
-            } elseif ($field instanceof PivotField) {
-                $instance->_setPivotSort($field->getName(), $value);
-            }
         }
 
         return $instance;
     }
-
-
-    /**
-     * @param string $view
-     * @return array
-     * @throws SchemaNotDefinedException
-     * @deprecated
-     */
-//    public function readViewFields(string $view): array
-//    {
-//        $schema = Schema::get(static::COMPONENT);
-//
-//        $r = $this->readFields($schema->getViewFields($view), $view);
-//
-//        $schema = Schema::get(static::COMPONENT);
-//
-//        // Option value
-//        $field = $schema->getRelatedModeValueField();
-//        if ($field instanceof AbstractField) {
-//            $getter = $field->getGetterForPrimitiveValue();
-//            $r['value'] = $this->{$getter}();
-//        }
-//
-//        // Option label
-//        $field = $schema->getRelatedModeLabelField();
-//        if ($field instanceof AbstractField) {
-//            $getter = $field->getGetterForPrimitiveValue();
-//            $r['label'] = $this->{$getter}();
-//        }
-//
-//        return $r;
-//    }
-
 
     /**
      * @param AbstractField[] $fields
@@ -1233,20 +1050,6 @@ abstract class AbstractInstance
                 } else {
                     continue;
                 }
-
-
-//                try {
-//                    $items = $this->{$getter}();
-//                } catch (\Error $error) {
-//                    $items = $this->_getRelatedVal($field->getComponent(), $field->getName(), false, $additionalData);
-//                }
-
-//                if (count($additionalData) > 0) {
-//                    $items = call_user_func_array([$this, $getter], $additionalData);
-//                } else {
-//                    $items = $this->{$getter}();
-//                }
-
 
                 $relatedAccessPolicy = null;
                 if (isset($this->accessPolicy)) {
@@ -1406,32 +1209,6 @@ abstract class AbstractInstance
                 if ($this->satisfiedOwnMethodCallArguments($getter, $additionalData)) {
                     $r[$responseKey] = $this->callOwnMethod($getter, $additionalData);
                 }
-
-
-//                if ($schema->isComposedField($field->getName())) {
-//                    $compositionField = $schema->getCompositionFieldComposingThisField($field->getName());
-//                    $relatedSchema = Schema::get($compositionField->getComponent());
-//                    $additionalData = [];
-//                    if ($relatedSchema->hasComplexPrimaryKey()) {
-//                        $relatedFieldPointingToMe = $relatedSchema->getField($field->getColumn());
-//                        $identifiers = $relatedSchema->getIdentifiers();
-//
-//                        if ($relatedFieldPointingToMe) {
-//                            $additionalData[$relatedFieldPointingToMe->getName()] = $this->getIdColumnValue();
-//                        }
-//
-//                        foreach ($identifiers as $identifier) {
-//                            if ($identifier->getName() === $relatedFieldPointingToMe->getName()) continue;
-//
-//                            $additionalData[$identifier->getName()] = null;
-//                        }
-//                    }
-//                    $r[$responseKey] = $this->_getCompositionVal($compositionField->getName(), $field->getName(), $additionalData);
-//
-//                } else {
-//                    $getter = $field->getGetterForPrimitiveValue();
-//                    $r[$responseKey] = $this->{$getter}();
-//                }
             }
         }
 
