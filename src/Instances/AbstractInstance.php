@@ -899,15 +899,15 @@ abstract class AbstractInstance
         return $r;
     }
 
-    public function autoCreate(array $data): static
+    public function autoCreate(array $data, array $internalMethodsArguments = []): static
     {
-        static::feedInstance($this, $this->prepareCrudData($data, CrudOperation::Create), CrudOperation::Create->value);
+        static::feedInstance($this, $this->prepareCrudData($data, CrudOperation::Create), $internalMethodsArguments);
         return $this->save();
     }
 
-    public function autoUpdate(array $data): static
+    public function autoUpdate(array $data, array $internalMethodsArguments = []): static
     {
-        static::feedInstance($this, $this->prepareCrudData($data, CrudOperation::Update), CrudOperation::Update->value);
+        static::feedInstance($this, $this->prepareCrudData($data, CrudOperation::Update), $internalMethodsArguments);
         return $this->save();
     }
 
@@ -921,7 +921,7 @@ abstract class AbstractInstance
         return $instance->autoUpdate($params);
     }
 
-    public static function feedInstance(AbstractInstance $instance, array $params, string $view = ''): static
+    public static function feedInstance(AbstractInstance $instance, array $params, array $internalMethodsArguments = []): static
     {
         $schema = Schema::get(static::COMPONENT);
 
@@ -950,13 +950,29 @@ abstract class AbstractInstance
             $composedDatum = !$schema->hasFieldDefined($param);
 
             // Composed related data
-            if ($composedDatum && ($field instanceof RelatedField || $field instanceof ForeignKeyField)) {
-                $composedInstance = $instance->_getCompositionInstance($field->getName());
+            if ($composedDatum) {
+                if ($field instanceof RelatedField || $field instanceof ForeignKeyField) {
+                    /** @var AbstractInstance $composedInstance */
+                    $composedInstance = $instance->_getCompositionInstance($field->getName(), $internalMethodsArguments);
+                } else {
+                    $fieldComposingThisField = $schema->getCompositionFieldComposingThisField($field->getName());
+                    /** @var AbstractInstance $composedInstance */
+                    $composedInstance = $instance->_getCompositionInstance($fieldComposingThisField->getName(), $internalMethodsArguments);
+                }
                 $composedInstance::feedInstance($composedInstance, [
                     $field->getName() => $value,
-                ]);
+                ], $internalMethodsArguments);
                 continue;
             }
+
+//            if ($composedDatum && ($field instanceof RelatedField || $field instanceof ForeignKeyField)) {
+//                /** @var AbstractInstance $composedInstance */
+//                $composedInstance = $instance->_getCompositionInstance($field->getName());
+//                $composedInstance::feedInstance($composedInstance, [
+//                    $field->getName() => $value,
+//                ], $internalMethodsArguments);
+//                continue;
+//            }
 
             // Common primitive value fields (included composed elements thanks to generated setter detection  approach)
             $setter = $field->getSetterForPrimitiveValue();
@@ -1002,6 +1018,8 @@ abstract class AbstractInstance
             } else {
                 $methodCallData = [$field->getName() => $value];
             }
+
+            $methodCallData = [...$internalMethodsArguments, ...$methodCallData];
 
             $methodCallData = $instance->prepareOwnMethodCallArguments($setter, $methodCallData, $field->getName());
             if (!$instance->satisfiedOwnMethodCallArguments($setter, $methodCallData)) {
