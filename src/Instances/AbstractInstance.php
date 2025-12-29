@@ -965,15 +965,6 @@ abstract class AbstractInstance
                 continue;
             }
 
-//            if ($composedDatum && ($field instanceof RelatedField || $field instanceof ForeignKeyField)) {
-//                /** @var AbstractInstance $composedInstance */
-//                $composedInstance = $instance->_getCompositionInstance($field->getName());
-//                $composedInstance::feedInstance($composedInstance, [
-//                    $field->getName() => $value,
-//                ], $internalMethodsArguments);
-//                continue;
-//            }
-
             // Common primitive value fields (included composed elements thanks to generated setter detection  approach)
             $setter = $field->getSetterForPrimitiveValue();
 
@@ -995,11 +986,15 @@ abstract class AbstractInstance
             } elseif ($field instanceof ForeignKeysField) {
                 if ($field->keyIsIds($param)) {
                     $setter = '_setForeignListVal';
-                    $methodCallData = ['fieldName' => $field->getName() . 'Id', 'value' => $value];
+                    $methodCallData = ['fieldName' => $field->getName(), 'value' => $value];
+
+                } elseif (is_array($value) && is_numeric($value[0])) {
+                    $setter = '_setForeignListVal';
+                    $methodCallData = ['fieldName' => $field->getName(), 'value' => $value];
 
                 } else {
                     $setter = '_setForeignListWithData';
-                    $methodCallData = ['fieldName' => $field->getName() . 'Id', 'data' => $value];
+                    $methodCallData = ['fieldName' => $field->getName(), 'data' => $value];
                 }
 
             } elseif ($field instanceof PivotField) {
@@ -1041,13 +1036,13 @@ abstract class AbstractInstance
         $r = [];
         foreach ($fields as $key => $field) {
             $responseKey = $key ?? $field->getName();
-            if (isset($this->accessPolicy)) {
-                $accessPolicy = $schema->getAccessPolicy($this->accessPolicy->name);
-                $responseKeyAux = $accessPolicy->getFieldPublicName($field);
-                if ($responseKeyAux) {
-                    $responseKey = $responseKeyAux;
-                }
-            }
+//            if (isset($this->accessPolicy)) {
+//                $accessPolicy = $schema->getAccessPolicy($this->accessPolicy->name);
+//                $responseKeyAux = $accessPolicy->getFieldPublicName($field);
+//                if ($responseKeyAux) {
+//                    $responseKey = $responseKeyAux;
+//                }
+//            }
 
             if ($field instanceof RelatedField) {
                 $additionalData = $internalMethodsArguments;

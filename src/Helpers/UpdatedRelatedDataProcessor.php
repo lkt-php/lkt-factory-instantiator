@@ -62,21 +62,26 @@ class UpdatedRelatedDataProcessor
         $r = [];
 
         foreach ($this->data as &$datum) {
-            if (!$datum[$relatedIdColumn]) {
-                if (method_exists($ownField, 'getRelatedComponentFeeds')){
-                    foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
-                        if (is_callable($relatedColumnValue)) {
-                            $relatedColumnValue = call_user_func_array($relatedColumnValue, [
-                                'referrer' => $this->referrer
-                            ]);
+            if (is_array($datum)) {
+                if (!$datum[$relatedIdColumn]) {
+                    if (method_exists($ownField, 'getRelatedComponentFeeds')){
+                        foreach ($ownField->getRelatedComponentFeeds() as $relatedColumnKey => $relatedColumnValue) {
+                            if (is_callable($relatedColumnValue)) {
+                                $relatedColumnValue = call_user_func_array($relatedColumnValue, [
+                                    'referrer' => $this->referrer
+                                ]);
+                            }
+                            if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
                         }
-                        if (!$datum[$relatedColumnKey]) $datum[$relatedColumnKey] = $relatedColumnValue;
                     }
                 }
-            }
 
-            $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
-            $instance::feedInstance($instance, $datum);
+                $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum[$relatedIdColumn]]);
+                $instance::feedInstance($instance, $datum);
+
+            } else if (is_numeric($datum)) {
+                $instance = call_user_func_array([$relatedClass, 'getInstance'], [$datum]);
+            }
             $r[] = $instance;
         }
 
