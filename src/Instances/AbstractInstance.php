@@ -544,12 +544,12 @@ abstract class AbstractInstance
 
                     if ($datum[$relatedIdColumn] > 0) {
                         $ins = $relatedClass::getInstance($datum[$relatedIdColumn]);
-                        $ins::feedInstance($ins, $datum, 'update');
+                        $ins::feedInstance($ins, $datum);
                         $ins->save();
 
                     } else {
                         $ins = $relatedClass::getInstance();
-                        $ins::feedInstance($ins, $datum, 'create');
+                        $ins::feedInstance($ins, $datum);
                         $ins->save();
                     }
 
