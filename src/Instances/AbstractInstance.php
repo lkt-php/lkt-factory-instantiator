@@ -947,7 +947,7 @@ abstract class AbstractInstance
                 if (!$field) $field = $schema->getCompositionFieldComposingThisField($param);
             }
 
-            if (!$field) continue;
+            if (!$field || $field instanceof MethodGetterField) continue;
 
             $composedDatum = !$schema->hasFieldDefined($param);
 
@@ -958,8 +958,9 @@ abstract class AbstractInstance
                     $composedInstance = $instance->_getCompositionInstance($field->getName(), $internalMethodsArguments);
                 } else {
                     $fieldComposingThisField = $schema->getCompositionFieldComposingThisField($field->getName());
+                    if (!$fieldComposingThisField) continue;
                     /** @var AbstractInstance $composedInstance */
-                    $composedInstance = $instance->_getCompositionInstance($fieldComposingThisField->getName(), $internalMethodsArguments);
+                    $composedInstance = $instance->_getCompositionInstance($fieldComposingThisField?->getName(), $internalMethodsArguments);
                 }
                 $composedInstance::feedInstance($composedInstance, [
                     $field->getName() => $value,
