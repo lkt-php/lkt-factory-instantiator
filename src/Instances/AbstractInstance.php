@@ -982,6 +982,10 @@ abstract class AbstractInstance
                 if ($field->keyIsId($param)) {
                     $setter = '_setIntegerVal';
                     $methodCallData = ['fieldName' => $field->getName() . 'Id', 'value' => $value];
+                }
+                elseif (is_numeric($value)) {
+                    $setter = '_setIntegerVal';
+                    $methodCallData = ['fieldName' => $field->getName(), 'value' => (int)$value];
                 } else {
                     continue;
                 }
