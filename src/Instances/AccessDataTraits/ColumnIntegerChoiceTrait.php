@@ -36,6 +36,15 @@ trait ColumnIntegerChoiceTrait
         /** @var IntegerField $field */
         $field = $schema->getField($fieldName);
 
+        $comparedValues = array_map(function ($v){
+            $c = $v;
+            if (is_object($v) && property_exists($v, 'value') && isset($v->value)) {
+                $c = $v->value;
+            }
+            return $c;
+
+        }, $values);
+
         if ($field->isMultiple()) {
             /** @var int[] $value */
             $value = $this->_getIntegerChoiceVal($fieldName);
@@ -43,17 +52,17 @@ trait ColumnIntegerChoiceTrait
 
             $r = true;
             foreach ($value as $val) {
-                $r = $r && in_array($val, $values, true);
+                $r = $r && in_array($val, $comparedValues, true);
             }
 
             return $r;
         }
 
         $value = $this->_getIntegerChoiceVal($fieldName);
-        return in_array($value, $values, true);
+        return in_array($value, $comparedValues, true);
     }
 
-    protected function _integerChoiceEqual(string $fieldName, int|array $compared): bool
+    protected function _integerChoiceEqual(string $fieldName, int|array|object $compared): bool
     {
         $schema = Schema::get(static::COMPONENT);
         /** @var IntegerField $field */
@@ -62,15 +71,33 @@ trait ColumnIntegerChoiceTrait
         if ($field->isMultiple()) {
             /** @var int[] $value */
             $value = $this->_getIntegerChoiceVal($fieldName);
-            return count($value) === count($compared)
-                && count(array_intersect($value, $compared)) === 0;
+
+            $comparedValues = array_map(function ($v){
+                $c = $v;
+                if (is_object($v) && property_exists($v, 'value') && isset($v->value)) {
+                    $c = $v->value;
+                }
+                return $c;
+
+            }, $compared);
+
+            return count($value) === count($comparedValues)
+                && count(array_intersect($value, $comparedValues)) === 0;
+        }
+
+        $c = $compared;
+        if (is_object($compared) && property_exists($compared, 'value') && isset($compared->value)) {
+            $c = $compared->value;
         }
 
         $value = $this->_getIntegerChoiceVal($fieldName);
-        return $value === $compared;
+        return $value === $c;
     }
 
-    protected function _setIntegerChoiceVal(string $fieldName, int|array $value = null): static
+    /**
+     * @note Object type value it's intended to match with an enum object
+     */
+    protected function _setIntegerChoiceVal(string $fieldName, int|array|object $value = null): static
     {
         $schema = Schema::get(static::COMPONENT);
         /** @var IntegerChoiceField $field */
@@ -79,11 +106,22 @@ trait ColumnIntegerChoiceTrait
 
         if (is_array($value)) {
             foreach ($value as $val) {
-                if (!in_array($val, $availableOptions, true)) {
-                    throw InvalidIntegerChoiceValueException::getInstance($val, $fieldName, static::COMPONENT);
+
+                $v = $val;
+                if (is_object($v) && isset($v->value)) {
+                    $v = $v->value;
+                }
+
+                if (!in_array($v, $availableOptions, true)) {
+                    throw InvalidIntegerChoiceValueException::getInstance($v, $fieldName, static::COMPONENT);
                 }
             }
         } else {
+
+            if (is_object($value) && property_exists($value, 'value') && isset($value->value)) {
+                $value = $value->value;
+            }
+
             if (!in_array($value, $availableOptions, true)) {
                 throw InvalidIntegerChoiceValueException::getInstance($value, $fieldName, static::COMPONENT);
             }

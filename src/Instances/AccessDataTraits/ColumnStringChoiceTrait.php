@@ -32,21 +32,49 @@ trait ColumnStringChoiceTrait
         return in_array($value, $values, true);
     }
 
-    protected function _stringChoiceEqual(string $fieldName, string $compared): bool
+    protected function _stringChoiceEqual(string $fieldName, string|object $compared): bool
     {
+        $c = $compared;
+        if (is_object($compared) && property_exists($compared, 'value') && isset($compared->value)) {
+            $c = $compared->value;
+        }
+
         $value = $this->_getStringChoiceVal($fieldName);
-        return $value === $compared;
+        return $value === $c;
     }
 
-    protected function _setStringChoiceVal(string $fieldName, string $value = null): static
+    /**
+     * @note Object type value it's intended to match with an enum object
+     */
+    protected function _setStringChoiceVal(string $fieldName, string|array|object $value = null): static
     {
         $schema = Schema::get(static::COMPONENT);
         /** @var StringChoiceField $field */
         $field = $schema->getField($fieldName);
         $availableOptions = $field->getAllowedOptions();
 
-        if (!in_array($value, $availableOptions, true)) {
-            throw InvalidStringChoiceValueException::getInstance($value, $fieldName, static::COMPONENT);
+        if (is_array($value)) {
+            foreach ($value as $val) {
+
+                $v = $val;
+                if (is_object($v) && isset($v->value)) {
+                    $v = $v->value;
+                }
+
+                if (!in_array($v, $availableOptions, true)) {
+                    throw InvalidStringChoiceValueException::getInstance($v, $fieldName, static::COMPONENT);
+                }
+            }
+
+        } else {
+
+            if (is_object($value) && property_exists($value, 'value') && isset($value->value)) {
+                $value = $value->value;
+            }
+
+            if (!in_array($value, $availableOptions, true)) {
+                throw InvalidStringChoiceValueException::getInstance($value, $fieldName, static::COMPONENT);
+            }
         }
 
         $converter = new RawResultsToInstanceConverter(static::COMPONENT, [
