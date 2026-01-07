@@ -632,6 +632,12 @@ abstract class AbstractInstance
             }
         }
 
+        if (count($this->PENDING_PIVOT_LINKS) > 0) {
+            foreach ($this->PENDING_PIVOT_LINKS as $field => $relatedId) {
+                $this->_addPivotRelation($field, $relatedId);
+            }
+        }
+
         $this->_saveCompositionValues($isUpdate);
 
         if ($this->accessPolicy && $this->accessPolicy->matchedEndOfLife(AccessPolicyEndOfLife::UntilNextWrite)) {
@@ -932,15 +938,30 @@ abstract class AbstractInstance
         if ($instance->accessPolicy) {
             $accessPolicy = $schema->getAccessPolicy($instance->accessPolicy->name);
         }
+        /** @var PivotField[] $pivotFields */
+        $pivotFields = $schema->getPivotFields();
 
         foreach ($params as $param => $value) {
 
+            $isPivotDatumFeed = false;
+            $feedPivotField;
+
             if ($accessPolicy) {
 
-                if (!$accessPolicy?->includesFieldName($param) && !$accessPolicy?->includesCompositionFieldName($param)) continue;
-
-                $field = $accessPolicy->getSchemaField($schema, $param);
-                if (!$field) $field = $accessPolicy->getSchemaCompositionField($schema, $param);
+                if (!$accessPolicy?->includesFieldName($param) && !$accessPolicy?->includesCompositionFieldName($param)) {
+                    foreach ($pivotFields as $pivotField) {
+                        $pivotSchema = $pivotField->getPivotSchema();
+                        if ($pivotSchema->hasField($param)) {
+                            $isPivotDatumFeed = true;
+                            $feedPivotField = $pivotSchema->getField($param);
+                            $field = $pivotField;
+                        }
+                    }
+                    if (!$isPivotDatumFeed) continue;
+                } else {
+                    $field = $accessPolicy->getSchemaField($schema, $param);
+                    if (!$field) $field = $accessPolicy->getSchemaCompositionField($schema, $param);
+                }
 
             } else {
                 $field = $schema->getField($param);
@@ -949,7 +970,7 @@ abstract class AbstractInstance
 
             if (!$field || $field instanceof MethodGetterField) continue;
 
-            $composedDatum = !$schema->hasFieldDefined($param);
+            $composedDatum = !$schema->hasFieldDefined($param) && !$isPivotDatumFeed;
 
             // Composed related data
             if ($composedDatum) {
@@ -1005,8 +1026,13 @@ abstract class AbstractInstance
                 }
 
             } elseif ($field instanceof PivotField) {
-                $setter = '_setPivotSort';
-                $methodCallData = ['column' => $field->getName(), 'data' => $value];
+                if ($isPivotDatumFeed) {
+                    $setter = '_setPendingPivotLink';
+                    $methodCallData = ['field' => $field->getName(), 'relatedId' => (int)$value];
+                } else {
+                    $setter = '_setPivotSort';
+                    $methodCallData = ['column' => $field->getName(), 'data' => $value];
+                }
 
             } else if ($field instanceof StringField || $field instanceof HTMLField) {
                 $methodCallData = [$field->getName() => clearInput($value)];
@@ -1186,12 +1212,24 @@ abstract class AbstractInstance
             } elseif ($field instanceof PivotField) {
 
                 $getter = $field->getGetterForPrimitiveValue();
+                /** @var static[] $items */
                 $items = $this->{$getter}();
                 if (!is_array($items)) $items = [];
                 $t = [];
-                foreach ($items as $item) {
-                    $t[] = $item->readViewFields('related');
 
+                $relatedAccessPolicy = null;
+                if (isset($this->accessPolicy)) {
+                    $relatedAccessPolicy = $schema->getAccessPolicyForRelationalField($this->accessPolicy, $field);
+
+                }
+
+                if (!$relatedAccessPolicy && Schema::get($field->getComponent())->hasRelatedAccessPolicy()) {
+                    $relatedAccessPolicy = 'lkt-related';
+                }
+
+                foreach ($items as $item) {
+                    if ($relatedAccessPolicy) $item->setAccessPolicy($relatedAccessPolicy, AccessPolicyEndOfLife::UntilNextRead);
+                    $t[] = $item->readAsRelated();
 
                 }
                 $r[$responseKey] = $t;

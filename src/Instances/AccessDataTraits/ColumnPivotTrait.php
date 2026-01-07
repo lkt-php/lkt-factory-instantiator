@@ -25,6 +25,14 @@ trait ColumnPivotTrait
 
     protected array $PIVOT_SORT = [];
 
+    protected array $PENDING_PIVOT_LINKS = [];
+
+    public function _setPendingPivotLink(string $field, mixed $relatedId): static
+    {
+        $this->PENDING_PIVOT_LINKS[$field] = $relatedId;
+        return $this;
+    }
+
     public function _getPivotQueryBuilder(string $column): Query
     {
         // Own fields
@@ -380,7 +388,7 @@ trait ColumnPivotTrait
         $positionQuery = $this->_getPivotTablePositionQueryBuilder($fieldName);
         $latestPosition = $positionQuery->select()[0]['lkt_position'];
 
-        $insertQuery = $this->_getPivotTableInsertQueryBuilder($fieldName, $relatedId, $latestPosition);
+        $insertQuery = $this->_getPivotTableInsertQueryBuilder($fieldName, $relatedId, (int)$latestPosition);
         return $insertQuery->insert();
     }
 }
