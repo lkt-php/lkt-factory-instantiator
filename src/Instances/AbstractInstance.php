@@ -968,6 +968,17 @@ abstract class AbstractInstance
                 if (!$field) $field = $schema->getCompositionFieldComposingThisField($param);
             }
 
+            if (!$field) {
+                foreach ($pivotFields as $pivotField) {
+                    $pivotSchema = $pivotField->getPivotSchema();
+                    if ($pivotSchema->hasField($param)) {
+                        $isPivotDatumFeed = true;
+                        $feedPivotField = $pivotSchema->getField($param);
+                        $field = $pivotField;
+                    }
+                }
+            }
+
             if (!$field || $field instanceof MethodGetterField) continue;
 
             $composedDatum = !$schema->hasFieldDefined($param) && !$isPivotDatumFeed;
